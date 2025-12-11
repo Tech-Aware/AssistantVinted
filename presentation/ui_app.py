@@ -90,7 +90,7 @@ class VintedAIApp(ctk.CTk):
 
             # --- Galerie d'images (header + ImagePreview) ---
             gallery_wrapper = ctk.CTkFrame(self)
-            gallery_wrapper.pack(fill="x", padx=10, pady=(0, 8))
+            gallery_wrapper.pack(fill="x", padx=0, pady=(0, 8))
 
             header = ctk.CTkFrame(gallery_wrapper)
             header.pack(fill="x")
