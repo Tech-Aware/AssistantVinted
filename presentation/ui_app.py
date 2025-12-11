@@ -100,8 +100,8 @@ class VintedAIApp(ctk.CTk):
 
             add_image_btn = ctk.CTkButton(
                 header,
-                text="Ajouter des photos",
-                width=140,
+                text="+",
+                width=30,
                 command=self.select_images,
             )
             add_image_btn.pack(side="right", padx=10, pady=4)
