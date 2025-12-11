@@ -72,99 +72,104 @@ class VintedAIApp(ctk.CTk):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
-        ctk.set_appearance_mode("system")
-        ctk.set_default_color_theme("blue")
+        try:
+            ctk.set_appearance_mode("system")
+            ctk.set_default_color_theme("blue")
 
-        self._build_top_bar()
+            self._build_top_bar()
 
-        left_frame = ctk.CTkFrame(self, width=280)
-        left_frame.pack(side="left", fill="y", padx=10, pady=10)
+            left_frame = ctk.CTkFrame(self, width=280)
+            left_frame.pack(side="left", fill="y", padx=10, pady=10)
 
-        right_frame = ctk.CTkFrame(self)
-        right_frame.pack(side="right", expand=True, fill="both", padx=10, pady=10)
+            right_scrollable = ctk.CTkScrollableFrame(self)
+            right_scrollable.pack(side="right", expand=True, fill="both", padx=10, pady=10)
 
-        self._build_gallery_header(right_frame)
+            self._build_gallery_header(right_scrollable)
 
-        self.gallery_frame = ctk.CTkScrollableFrame(right_frame, height=230)
-        self.gallery_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        self.gallery_frame.bind("<Configure>", self._on_gallery_resize)
-        self.gallery_frame.bind("<Enter>", self._enable_gallery_scroll)
-        self.gallery_frame.bind("<Leave>", self._disable_gallery_scroll)
+            self.gallery_frame = ctk.CTkScrollableFrame(right_scrollable, height=230)
+            self.gallery_frame.pack(fill="both", expand=True, padx=10, pady=10)
+            self.gallery_frame.bind("<Configure>", self._on_gallery_resize)
+            self.gallery_frame.bind("<Enter>", self._enable_gallery_scroll)
+            self.gallery_frame.bind("<Leave>", self._disable_gallery_scroll)
 
-        # --- Profil d'analyse ---
-        profile_label = ctk.CTkLabel(left_frame, text="Profil d'analyse :")
-        profile_label.pack(anchor="w", pady=(15, 0))
+            # --- Profil d'analyse ---
+            profile_label = ctk.CTkLabel(left_frame, text="Profil d'analyse :")
+            profile_label.pack(anchor="w", pady=(15, 0))
 
-        profile_values = [name.value for name in AnalysisProfileName]
-        if profile_values:
-            self.profile_var.set(profile_values[0])
+            profile_values = [name.value for name in AnalysisProfileName]
+            if profile_values:
+                self.profile_var.set(profile_values[0])
 
-        profile_combo = ctk.CTkComboBox(
-            left_frame,
-            values=profile_values,
-            variable=self.profile_var,
-            command=self._on_profile_change,
-            state="readonly",
-            width=240,
-        )
-        profile_combo.pack(anchor="w", pady=5)
+            profile_combo = ctk.CTkComboBox(
+                left_frame,
+                values=profile_values,
+                variable=self.profile_var,
+                command=self._on_profile_change,
+                state="readonly",
+                width=240,
+            )
+            profile_combo.pack(anchor="w", pady=5)
 
-        # --- Inputs manuels (v1 simple) ---
-        self.size_inputs_frame = ctk.CTkFrame(left_frame)
-        self.size_inputs_frame.pack(anchor="w", fill="x", pady=(10, 0))
+            # --- Inputs manuels (v1 simple) ---
+            self.size_inputs_frame = ctk.CTkFrame(left_frame)
+            self.size_inputs_frame.pack(anchor="w", fill="x", pady=(10, 0))
 
-        fr_label = ctk.CTkLabel(self.size_inputs_frame, text="Taille FR (optionnel) :")
-        fr_label.pack(anchor="w", pady=(5, 0))
-        fr_entry = ctk.CTkEntry(self.size_inputs_frame, textvariable=self.size_fr_var, width=240)
-        fr_entry.pack(anchor="w", pady=5)
+            fr_label = ctk.CTkLabel(self.size_inputs_frame, text="Taille FR (optionnel) :")
+            fr_label.pack(anchor="w", pady=(5, 0))
+            fr_entry = ctk.CTkEntry(self.size_inputs_frame, textvariable=self.size_fr_var, width=240)
+            fr_entry.pack(anchor="w", pady=5)
 
-        us_label = ctk.CTkLabel(self.size_inputs_frame, text="Taille US (optionnel) :")
-        us_label.pack(anchor="w", pady=(5, 0))
-        us_entry = ctk.CTkEntry(self.size_inputs_frame, textvariable=self.size_us_var, width=240)
-        us_entry.pack(anchor="w", pady=5)
+            us_label = ctk.CTkLabel(self.size_inputs_frame, text="Taille US (optionnel) :")
+            us_label.pack(anchor="w", pady=(5, 0))
+            us_entry = ctk.CTkEntry(self.size_inputs_frame, textvariable=self.size_us_var, width=240)
+            us_entry.pack(anchor="w", pady=5)
 
-        self.measure_mode_frame = ctk.CTkFrame(left_frame)
-        measure_label = ctk.CTkLabel(
-            self.measure_mode_frame,
-            text="Méthode de relevé :",
-        )
-        measure_label.pack(anchor="w", pady=(5, 0))
+            self.measure_mode_frame = ctk.CTkFrame(left_frame)
+            measure_label = ctk.CTkLabel(
+                self.measure_mode_frame,
+                text="Méthode de relevé :",
+            )
+            measure_label.pack(anchor="w", pady=(5, 0))
 
-        etiquette_radio = ctk.CTkRadioButton(
-            self.measure_mode_frame,
-            text="Étiquette visible",
-            variable=self.measure_mode_var,
-            value="etiquette",
-        )
-        etiquette_radio.pack(anchor="w", pady=2)
+            etiquette_radio = ctk.CTkRadioButton(
+                self.measure_mode_frame,
+                text="Étiquette visible",
+                variable=self.measure_mode_var,
+                value="etiquette",
+            )
+            etiquette_radio.pack(anchor="w", pady=2)
 
-        measures_radio = ctk.CTkRadioButton(
-            self.measure_mode_frame,
-            text="Analyser les mesures",
-            variable=self.measure_mode_var,
-            value="mesures",
-        )
-        measures_radio.pack(anchor="w", pady=2)
+            measures_radio = ctk.CTkRadioButton(
+                self.measure_mode_frame,
+                text="Analyser les mesures",
+                variable=self.measure_mode_var,
+                value="mesures",
+            )
+            measures_radio.pack(anchor="w", pady=2)
 
-        # --- Sélection des images ---
-        self.image_label = ctk.CTkLabel(
-            left_frame,
-            text="Aucune image sélectionnée.",
-            wraplength=240,
-            justify="left",
-        )
-        self.image_label.pack(anchor="w", pady=(20, 10))
+            # --- Sélection des images ---
+            self.image_label = ctk.CTkLabel(
+                left_frame,
+                text="Aucune image sélectionnée.",
+                wraplength=240,
+                justify="left",
+            )
+            self.image_label.pack(anchor="w", pady=(20, 10))
 
-        # --- Zone de résultat ---
-        result_label = ctk.CTkLabel(right_frame, text="Résultat (titre + description) :")
-        result_label.pack(anchor="w", pady=(10, 0), padx=10)
+            # --- Zone de résultat ---
+            result_label = ctk.CTkLabel(right_scrollable, text="Résultat (titre + description) :")
+            result_label.pack(anchor="w", pady=(10, 0), padx=10)
 
-        self.result_text = ctk.CTkTextbox(right_frame, wrap="word")
-        self.result_text.pack(expand=True, fill="both", padx=10, pady=(10, 6))
+            self.result_text = ctk.CTkTextbox(right_scrollable, wrap="word")
+            self.result_text.pack(expand=True, fill="both", padx=10, pady=(10, 6))
 
-        self._build_generate_button(right_frame)
+            self._build_generate_button(right_scrollable)
 
-        self._update_profile_ui()
+            self._update_profile_ui()
+
+            logger.info("UI principale construite avec zone droite scrollable.")
+        except Exception as exc:
+            logger.error("Erreur lors de la construction de l'UI principale: %s", exc, exc_info=True)
 
     def _build_gallery_header(self, parent: ctk.CTkFrame) -> None:
         try:
