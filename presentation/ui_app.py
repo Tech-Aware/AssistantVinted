@@ -98,14 +98,44 @@ class VintedAIApp(ctk.CTk):
                 parent_canvas = getattr(self.gallery_frame, "_parent_canvas", None)
                 if parent_canvas:
                     parent_canvas.configure(highlightthickness=0, bd=0)
-                    logger.debug("Canvas parent de la galerie configuré sans bordure ni highlight.")
+                    manager = parent_canvas.winfo_manager()
+                    if manager == "pack":
+                        parent_canvas.pack_configure(padx=0, pady=0)
+                        logger.debug(
+                            "Canvas parent de la galerie configuré sans bordure ni highlight (pack)."
+                        )
+                    elif manager == "grid":
+                        parent_canvas.grid_configure(padx=0, pady=0)
+                        logger.debug(
+                            "Canvas parent de la galerie configuré sans bordure ni highlight (grid)."
+                        )
+                    else:
+                        logger.debug(
+                            "Canvas parent de la galerie configuré sans bordure ni highlight (manager %s).",
+                            manager,
+                        )
                 else:
                     logger.warning("Canvas parent de la galerie introuvable pour configuration des bordures.")
-                self.gallery_frame._scrollable_frame.grid_anchor("nw")
-                self.gallery_frame._scrollable_frame.configure(padx=0, pady=0)
-                logger.debug(
-                    "Ancrage et suppression des marges internes de la galerie pour coller le contenu en haut."
-                )
+                inner = getattr(self.gallery_frame, "scrollable_frame", None)
+                if inner is None:
+                    inner = getattr(self.gallery_frame, "_scrollable_frame", None)
+                if inner is not None:
+                    try:
+                        inner.grid_anchor("nw")
+                        inner.configure(padx=0, pady=0)
+                        logger.debug(
+                            "Ancrage et suppression des marges internes de la galerie appliqués sur le conteneur interne."
+                        )
+                    except Exception as exc_anchor:
+                        logger.error(
+                            "Impossible d'ajuster l'ancrage ou les marges internes de la galerie : %s",
+                            exc_anchor,
+                            exc_info=True,
+                        )
+                else:
+                    logger.warning(
+                        "Conteneur interne du scrollable introuvable; ancrage et marges internes non ajustés."
+                    )
             except Exception as exc_anchor:
                 logger.error(
                     "Impossible d'ajuster l'ancrage ou les marges de la galerie : %s",
