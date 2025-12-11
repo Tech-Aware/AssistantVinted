@@ -98,14 +98,44 @@ class VintedAIApp(ctk.CTk):
                 parent_canvas = getattr(self.gallery_frame, "_parent_canvas", None)
                 if parent_canvas:
                     parent_canvas.configure(highlightthickness=0, bd=0)
-                    logger.debug("Canvas parent de la galerie configuré sans bordure ni highlight.")
+                    manager = parent_canvas.winfo_manager()
+                    if manager == "pack":
+                        parent_canvas.pack_configure(padx=0, pady=0)
+                        logger.debug(
+                            "Canvas parent de la galerie configuré sans bordure ni highlight (pack)."
+                        )
+                    elif manager == "grid":
+                        parent_canvas.grid_configure(padx=0, pady=0)
+                        logger.debug(
+                            "Canvas parent de la galerie configuré sans bordure ni highlight (grid)."
+                        )
+                    else:
+                        logger.debug(
+                            "Canvas parent de la galerie configuré sans bordure ni highlight (manager %s).",
+                            manager,
+                        )
                 else:
                     logger.warning("Canvas parent de la galerie introuvable pour configuration des bordures.")
-                self.gallery_frame._scrollable_frame.grid_anchor("nw")
-                self.gallery_frame._scrollable_frame.configure(padx=0, pady=0)
-                logger.debug(
-                    "Ancrage et suppression des marges internes de la galerie pour coller le contenu en haut."
-                )
+                inner = getattr(self.gallery_frame, "scrollable_frame", None)
+                if inner is None:
+                    inner = getattr(self.gallery_frame, "_scrollable_frame", None)
+                if inner is not None:
+                    try:
+                        inner.grid_anchor("nw")
+                        inner.configure(padx=0, pady=0)
+                        logger.debug(
+                            "Ancrage et suppression des marges internes de la galerie appliqués sur le conteneur interne."
+                        )
+                    except Exception as exc_anchor:
+                        logger.error(
+                            "Impossible d'ajuster l'ancrage ou les marges internes de la galerie : %s",
+                            exc_anchor,
+                            exc_info=True,
+                        )
+                else:
+                    logger.warning(
+                        "Conteneur interne du scrollable introuvable; ancrage et marges internes non ajustés."
+                    )
             except Exception as exc_anchor:
                 logger.error(
                     "Impossible d'ajuster l'ancrage ou les marges de la galerie : %s",
@@ -128,7 +158,7 @@ class VintedAIApp(ctk.CTk):
 
             # --- Profil d'analyse ---
             profile_label = ctk.CTkLabel(left_frame, text="Profil d'analyse :")
-            profile_label.pack(anchor="w", pady=(15, 0))
+            profile_label.pack(anchor="w", pady=(15, 0), padx=10)
 
             profile_values = [name.value for name in AnalysisProfileName]
             if profile_values:
@@ -142,7 +172,7 @@ class VintedAIApp(ctk.CTk):
                 state="readonly",
                 width=240,
             )
-            profile_combo.pack(anchor="w", pady=5)
+            profile_combo.pack(anchor="w", pady=5, padx=10)
 
             # --- Inputs manuels (v1 simple) ---
             self.size_inputs_frame = ctk.CTkFrame(left_frame)
@@ -264,7 +294,7 @@ class VintedAIApp(ctk.CTk):
     def _build_top_bar(self) -> None:
         try:
             top_bar = ctk.CTkFrame(self)
-            top_bar.pack(fill="x", padx=10, pady=(5, 0))
+            top_bar.pack(fill="x", padx=0, pady=(5, 0))
 
             settings_btn = ctk.CTkButton(
                 top_bar,
@@ -552,7 +582,20 @@ class VintedAIApp(ctk.CTk):
                     col = idx % columns
 
                     card = ctk.CTkFrame(self.gallery_frame)
-                    card.grid(row=row, column=col, padx=8, pady=2, sticky="nsew")
+                    vertical_padding = (0, 2) if row == 0 else 2
+                    card.grid(
+                        row=row,
+                        column=col,
+                        padx=8,
+                        pady=vertical_padding,
+                        sticky="nsew",
+                    )
+                    logger.debug(
+                        "Carte de miniature positionnée (row=%s, col=%s, pady=%s).",
+                        row,
+                        col,
+                        vertical_padding,
+                    )
 
                     pil_image = Image.open(img_path)
                     pil_image.thumbnail((thumb_size, thumb_size))
@@ -560,7 +603,12 @@ class VintedAIApp(ctk.CTk):
                     self.thumbnail_images.append(thumb)
 
                     img_label = ctk.CTkLabel(card, image=thumb, text="")
-                    img_label.pack(expand=True, fill="both", padx=4, pady=4)
+                    img_label.pack(expand=True, fill="both", padx=4, pady=(0, 4))
+                    logger.debug(
+                        "Image miniature ajoutée avec padding vertical réduit (row=%s, col=%s).",
+                        row,
+                        col,
+                    )
                     img_label.bind(
                         "<Button-1>",
                         lambda _evt, path=img_path: self._show_full_image(path),
