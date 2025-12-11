@@ -83,8 +83,7 @@ class VintedAIApp(ctk.CTk):
         right_frame = ctk.CTkFrame(self)
         right_frame.pack(side="right", expand=True, fill="both", padx=10, pady=10)
 
-        gallery_label = ctk.CTkLabel(right_frame, text="Galerie d'images :")
-        gallery_label.pack(anchor="w", pady=(10, 0), padx=10)
+        self._build_gallery_header(right_frame)
 
         self.gallery_frame = ctk.CTkScrollableFrame(right_frame, height=230)
         self.gallery_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -148,39 +147,63 @@ class VintedAIApp(ctk.CTk):
         measures_radio.pack(anchor="w", pady=2)
 
         # --- Sélection des images ---
-        image_btn = ctk.CTkButton(
-            left_frame,
-            text="Sélectionner les images...",
-            command=self.select_images,
-            width=240,
-        )
-        image_btn.pack(anchor="w", pady=(20, 5))
-
         self.image_label = ctk.CTkLabel(
             left_frame,
             text="Aucune image sélectionnée.",
             wraplength=240,
             justify="left",
         )
-        self.image_label.pack(anchor="w", pady=(0, 10))
-
-        # --- Bouton de génération ---
-        generate_btn = ctk.CTkButton(
-            left_frame,
-            text="Générer l'annonce",
-            command=self.generate_listing,
-            width=240,
-        )
-        generate_btn.pack(anchor="w", pady=(20, 10))
+        self.image_label.pack(anchor="w", pady=(20, 10))
 
         # --- Zone de résultat ---
         result_label = ctk.CTkLabel(right_frame, text="Résultat (titre + description) :")
         result_label.pack(anchor="w", pady=(10, 0), padx=10)
 
         self.result_text = ctk.CTkTextbox(right_frame, wrap="word")
-        self.result_text.pack(expand=True, fill="both", padx=10, pady=10)
+        self.result_text.pack(expand=True, fill="both", padx=10, pady=(10, 6))
+
+        self._build_generate_button(right_frame)
 
         self._update_profile_ui()
+
+    def _build_gallery_header(self, parent: ctk.CTkFrame) -> None:
+        try:
+            header = ctk.CTkFrame(parent)
+            header.pack(fill="x", pady=(10, 0), padx=10)
+
+            gallery_label = ctk.CTkLabel(header, text="Galerie d'images :")
+            gallery_label.pack(side="left", anchor="w")
+
+            add_image_btn = ctk.CTkButton(
+                header,
+                text="+",
+                width=36,
+                height=36,
+                command=self.select_images,
+            )
+            add_image_btn.pack(side="right")
+
+            logger.info("En-tête de galerie initialisé avec bouton d'ajout compact.")
+        except Exception as exc:
+            logger.error(
+                "Erreur lors de la construction de l'en-tête de galerie: %s", exc, exc_info=True
+            )
+
+    def _build_generate_button(self, parent: ctk.CTkFrame) -> None:
+        try:
+            generate_btn = ctk.CTkButton(
+                parent,
+                text="Générer",
+                command=self.generate_listing,
+                width=120,
+            )
+            generate_btn.pack(anchor="e", padx=10, pady=(0, 10))
+
+            logger.info("Bouton de génération positionné sous la zone de résultat.")
+        except Exception as exc:
+            logger.error(
+                "Erreur lors de l'initialisation du bouton de génération: %s", exc, exc_info=True
+            )
 
     def _build_top_bar(self) -> None:
         try:
