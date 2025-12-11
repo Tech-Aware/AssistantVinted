@@ -582,7 +582,20 @@ class VintedAIApp(ctk.CTk):
                     col = idx % columns
 
                     card = ctk.CTkFrame(self.gallery_frame)
-                    card.grid(row=row, column=col, padx=8, pady=2, sticky="nsew")
+                    vertical_padding = (0, 2) if row == 0 else 2
+                    card.grid(
+                        row=row,
+                        column=col,
+                        padx=8,
+                        pady=vertical_padding,
+                        sticky="nsew",
+                    )
+                    logger.debug(
+                        "Carte de miniature positionnée (row=%s, col=%s, pady=%s).",
+                        row,
+                        col,
+                        vertical_padding,
+                    )
 
                     pil_image = Image.open(img_path)
                     pil_image.thumbnail((thumb_size, thumb_size))
@@ -590,7 +603,12 @@ class VintedAIApp(ctk.CTk):
                     self.thumbnail_images.append(thumb)
 
                     img_label = ctk.CTkLabel(card, image=thumb, text="")
-                    img_label.pack(expand=True, fill="both", padx=4, pady=4)
+                    img_label.pack(expand=True, fill="both", padx=4, pady=(0, 4))
+                    logger.debug(
+                        "Image miniature ajoutée avec padding vertical réduit (row=%s, col=%s).",
+                        row,
+                        col,
+                    )
                     img_label.bind(
                         "<Button-1>",
                         lambda _evt, path=img_path: self._show_full_image(path),
