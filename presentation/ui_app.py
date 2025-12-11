@@ -180,20 +180,17 @@ class VintedAIApp(ctk.CTk):
             gallery_label = ctk.CTkLabel(header, text="Galerie d'images :")
             gallery_label.pack(side="left", anchor="w")
 
-            info_frame = ctk.CTkFrame(header)
-            info_frame.pack(side="right")
-
-            self.gallery_info_label = ctk.CTkLabel(info_frame, text="")
-            self.gallery_info_label.pack(side="left", padx=(0, 10))
-
             add_image_btn = ctk.CTkButton(
-                info_frame,
+                header,
                 text="+",
                 width=36,
                 height=36,
                 command=self.select_images,
             )
             add_image_btn.pack(side="right")
+
+            self.gallery_info_label = ctk.CTkLabel(header, text="")
+            self.gallery_info_label.pack(side="right", padx=(0, 10))
 
             logger.info("En-tête de galerie initialisé avec compteur et bouton d'ajout.")
         except Exception as exc:
