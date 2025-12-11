@@ -183,7 +183,7 @@ class VintedAIApp(ctk.CTk):
             info_frame = ctk.CTkFrame(header)
             info_frame.pack(side="right")
 
-            self.gallery_info_label = ctk.CTkLabel(info_frame, text="Aucune image sélectionnée")
+            self.gallery_info_label = ctk.CTkLabel(info_frame, text="")
             self.gallery_info_label.pack(side="left", padx=(0, 10))
 
             add_image_btn = ctk.CTkButton(
@@ -537,7 +537,8 @@ class VintedAIApp(ctk.CTk):
                 return
 
             if not self.image_paths:
-                self.gallery_info_label.configure(text="Aucune image sélectionnée")
+                self.gallery_info_label.configure(text="")
+                logger.info("Compteur de galerie vidé (aucune image affichée).")
                 return
 
             count = len(self.image_paths)
