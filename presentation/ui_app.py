@@ -158,7 +158,7 @@ class VintedAIApp(ctk.CTk):
 
             # --- Profil d'analyse ---
             profile_label = ctk.CTkLabel(left_frame, text="Profil d'analyse :")
-            profile_label.pack(anchor="w", pady=(15, 0))
+            profile_label.pack(anchor="w", pady=(15, 0), padx=10)
 
             profile_values = [name.value for name in AnalysisProfileName]
             if profile_values:
@@ -172,7 +172,7 @@ class VintedAIApp(ctk.CTk):
                 state="readonly",
                 width=240,
             )
-            profile_combo.pack(anchor="w", pady=5)
+            profile_combo.pack(anchor="w", pady=5, padx=10)
 
             # --- Inputs manuels (v1 simple) ---
             self.size_inputs_frame = ctk.CTkFrame(left_frame)
@@ -294,7 +294,7 @@ class VintedAIApp(ctk.CTk):
     def _build_top_bar(self) -> None:
         try:
             top_bar = ctk.CTkFrame(self)
-            top_bar.pack(fill="x", padx=10, pady=(5, 0))
+            top_bar.pack(fill="x", padx=0, pady=(5, 0))
 
             settings_btn = ctk.CTkButton(
                 top_bar,
