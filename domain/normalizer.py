@@ -6,6 +6,7 @@ import re
 from typing import Dict, Any, Optional
 import logging
 
+from domain.description_builder import build_jean_levis_description
 from domain.templates import AnalysisProfileName
 from domain.title_builder import build_jean_levis_title
 
@@ -364,7 +365,21 @@ def normalize_and_postprocess(
     logger.debug("normalize_and_postprocess: features construites: %s", features)
 
     # --- 2) Description ----------------------------------------------------
-    description = ai_data.get("description")
+    try:
+        if profile_name == AnalysisProfileName.JEAN_LEVIS:
+            description = build_jean_levis_description(
+                {**features, "defects": ai_data.get("defects")},
+                ai_description=ai_data.get("description"),
+                ai_defects=ai_data.get("defects"),
+            )
+        else:
+            description = ai_data.get("description")
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception(
+            "normalize_and_postprocess: erreur description -> fallback brut (%s)",
+            exc,
+        )
+        description = ai_data.get("description")
 
     # --- 3) Merge final ----------------------------------------------------
     result.update(features)
