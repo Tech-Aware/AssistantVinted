@@ -174,6 +174,11 @@ class VintedAIApp(ctk.CTk):
             settings_window = ctk.CTkToplevel(self)
             settings_window.title("Paramètres avancés")
             settings_window.geometry("420x320")
+            settings_window.transient(self)
+            settings_window.grab_set()
+            settings_window.lift()
+            settings_window.focus_force()
+            settings_window.attributes("-topmost", True)
 
             provider_values = [p.value for p in self.providers.keys()]
 
@@ -210,12 +215,22 @@ class VintedAIApp(ctk.CTk):
                         "***" if self.gemini_key_var.get() else "(vide)",
                     )
                     messagebox.showinfo("Paramètres", "Préférences enregistrées.")
+                    close_settings()
                 except Exception as exc_save:
                     logger.error("Erreur lors de l'enregistrement des paramètres: %s", exc_save, exc_info=True)
                     messagebox.showerror(
                         "Erreur paramètres",
                         f"Impossible d'enregistrer les paramètres :\n{exc_save}",
                     )
+
+            def close_settings() -> None:
+                try:
+                    logger.info("Fermeture de la fenêtre des paramètres.")
+                    settings_window.grab_release()
+                    settings_window.destroy()
+                    self.focus_force()
+                except Exception as exc_close:
+                    logger.error("Erreur lors de la fermeture des paramètres: %s", exc_close, exc_info=True)
 
             save_btn = ctk.CTkButton(
                 settings_window,
@@ -224,6 +239,8 @@ class VintedAIApp(ctk.CTk):
                 width=140,
             )
             save_btn.pack(pady=20)
+
+            settings_window.protocol("WM_DELETE_WINDOW", close_settings)
 
             logger.info("Fenêtre des paramètres ouverte.")
         except Exception as exc:
