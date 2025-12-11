@@ -86,6 +86,11 @@ class VintedAIApp(ctk.CTk):
 
             self.gallery_container = ctk.CTkFrame(self)
             self.gallery_frame = ctk.CTkScrollableFrame(self.gallery_container, height=230)
+            try:
+                self.gallery_frame._scrollable_frame.grid_anchor("nw")
+                logger.debug("Ancrage de la galerie sur le coin supérieur gauche pour éviter tout espace inutile.")
+            except Exception as exc_anchor:
+                logger.error("Impossible d'ancrer la galerie en haut : %s", exc_anchor, exc_info=True)
             self.gallery_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
             self.gallery_frame.bind("<Configure>", self._on_gallery_resize)
             self.gallery_frame.bind("<Enter>", self._enable_gallery_scroll)
@@ -481,7 +486,7 @@ class VintedAIApp(ctk.CTk):
                     col = idx % columns
 
                     card = ctk.CTkFrame(self.gallery_frame)
-                    card.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
+                    card.grid(row=row, column=col, padx=8, pady=4, sticky="nsew")
 
                     pil_image = Image.open(img_path)
                     pil_image.thumbnail((thumb_size, thumb_size))
