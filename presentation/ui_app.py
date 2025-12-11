@@ -88,9 +88,16 @@ class VintedAIApp(ctk.CTk):
             self.gallery_frame = ctk.CTkScrollableFrame(self.gallery_container, height=230)
             try:
                 self.gallery_frame._scrollable_frame.grid_anchor("nw")
-                logger.debug("Ancrage de la galerie sur le coin supérieur gauche pour éviter tout espace inutile.")
+                self.gallery_frame._scrollable_frame.configure(padx=0, pady=0)
+                logger.debug(
+                    "Ancrage et suppression des marges internes de la galerie pour coller le contenu en haut."
+                )
             except Exception as exc_anchor:
-                logger.error("Impossible d'ancrer la galerie en haut : %s", exc_anchor, exc_info=True)
+                logger.error(
+                    "Impossible d'ajuster l'ancrage ou les marges de la galerie : %s",
+                    exc_anchor,
+                    exc_info=True,
+                )
             self.gallery_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
             self.gallery_frame.bind("<Configure>", self._on_gallery_resize)
             self.gallery_frame.bind("<Enter>", self._enable_gallery_scroll)
@@ -486,7 +493,7 @@ class VintedAIApp(ctk.CTk):
                     col = idx % columns
 
                     card = ctk.CTkFrame(self.gallery_frame)
-                    card.grid(row=row, column=col, padx=8, pady=4, sticky="nsew")
+                    card.grid(row=row, column=col, padx=8, pady=2, sticky="nsew")
 
                     pil_image = Image.open(img_path)
                     pil_image.thumbnail((thumb_size, thumb_size))
@@ -514,8 +521,22 @@ class VintedAIApp(ctk.CTk):
                     logger.error("Erreur lors du rendu d'une miniature: %s", exc_img, exc_info=True)
 
             logger.info("Galerie mise à jour (%s images).", len(self.image_paths))
+            self._reset_gallery_scroll()
         except Exception as exc:
             logger.error("Erreur lors de la mise à jour de la galerie: %s", exc, exc_info=True)
+
+    def _reset_gallery_scroll(self) -> None:
+        """Replace la galerie tout en haut pour éviter tout décalage visuel."""
+        try:
+            canvas = getattr(self.gallery_frame, "_parent_canvas", None)
+            if not canvas:
+                logger.warning("Canvas introuvable pour réinitialiser le scroll de la galerie.")
+                return
+
+            canvas.yview_moveto(0)
+            logger.debug("Position du scroll de la galerie réinitialisée en haut.")
+        except Exception as exc:
+            logger.error("Erreur lors de la réinitialisation du scroll de la galerie: %s", exc, exc_info=True)
 
     def _remove_image(self, image_path: Path) -> None:
         try:
