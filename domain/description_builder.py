@@ -93,6 +93,51 @@ def _build_state_sentence(defects: Optional[str]) -> str:
         return "État non précisé (voir photos)."
 
 
+def _build_hashtags(
+    brand: str,
+    model: str,
+    fit: str,
+    color: str,
+    size_fr: str,
+    size_us: str,
+    length: str,
+) -> str:
+    try:
+        tokens: List[str] = []
+
+        def add(token: str) -> None:
+            if token and token not in tokens:
+                tokens.append(token)
+
+        brand_token = brand.lower().replace("'", "") if brand else "levis"
+        add(f"#{brand_token}")
+        add("#jeanlevis")
+        add("#jeandenim")
+
+        if model:
+            add(f"#levis{model}")
+
+        if fit:
+            fit_clean = fit.lower().replace(" ", "")
+            add(f"#{fit_clean}jean")
+
+        if color:
+            color_clean = color.lower().replace(" ", "")
+            add(f"#jean{color_clean}")
+
+        if size_fr:
+            add(f"#fr{size_fr.lower()}")
+        if size_us:
+            add(f"#w{size_us.lower().replace('w', '')}")
+        if length:
+            add(f"#l{length.lower().replace('l', '')}")
+
+        return " ".join(tokens)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("_build_hashtags: erreur %s", exc)
+        return ""
+
+
 # ---------------------------------------------------------------------------
 # Génération de description pour jean Levi's
 # ---------------------------------------------------------------------------
@@ -155,6 +200,23 @@ def build_jean_levis_description(
         )
         cta = " ".join(cta_parts)
 
+        hashtags = _build_hashtags(
+            brand=brand,
+            model=model,
+            fit=fit,
+            color=color,
+            size_fr=size_fr,
+            size_us=size_us,
+            length=length,
+        )
+
+        footer_parts = []
+        if brand:
+            footer_parts.append(f"Marque : {brand}")
+        if color:
+            footer_parts.append(f"Couleur : {color}")
+        footer = "\n".join(footer_parts)
+
         paragraphs = [
             intro,
             intro_size,
@@ -163,9 +225,11 @@ def build_jean_levis_description(
             state_sentence,
             logistics_sentence,
             cta,
+            hashtags,
+            footer,
         ]
 
-        description = "\n\n".join(paragraphs)
+        description = "\n\n".join(part for part in paragraphs if part)
         logger.debug("build_jean_levis_description: description générée = %s", description)
         return description
 
