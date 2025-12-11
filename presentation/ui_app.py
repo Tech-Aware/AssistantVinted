@@ -43,6 +43,7 @@ class VintedAIApp(ctk.CTk):
 
         self.providers = providers
         self.provider_var = ctk.StringVar(value="")
+        self.provider_var.trace_add("write", self._on_provider_change)
         self.profile_var = ctk.StringVar(value="")
 
         self.openai_key_var = ctk.StringVar(value=os.environ.get("OPENAI_API_KEY", ""))
@@ -63,6 +64,8 @@ class VintedAIApp(ctk.CTk):
         self.profiles_by_name_value: Dict[str, AnalysisProfile] = {
             profile.name.value: profile for profile in ALL_PROFILES.values()
         }
+
+        self.title_label: Optional[ctk.CTkLabel] = None
 
         self._build_ui()
 
@@ -271,20 +274,65 @@ class VintedAIApp(ctk.CTk):
             )
             settings_btn.pack(side="left", padx=(5, 10), pady=5)
 
-            title_label = ctk.CTkLabel(
+            self.title_label = ctk.CTkLabel(
                 top_bar,
                 text="Assistant Vinted - Préférences adaptatives",
                 font=ctk.CTkFont(size=16, weight="bold"),
             )
-            title_label.pack(side="left", pady=5)
+            self.title_label.pack(side="left", pady=5)
 
             provider_values = [p.value for p in self.providers.keys()]
             if provider_values and not self.provider_var.get():
                 self.provider_var.set(provider_values[0])
 
+            self._update_top_bar_title()
+
             logger.info("Barre supérieure initialisée avec bouton paramètres.")
         except Exception as exc:
             logger.error("Erreur lors de la construction de la barre supérieure: %s", exc, exc_info=True)
+
+    def _on_provider_change(self, *_args: object) -> None:
+        try:
+            logger.info("Provider IA sélectionné: %s", self.provider_var.get())
+            self._update_top_bar_title()
+        except Exception as exc:
+            logger.error("Erreur lors du changement de provider IA: %s", exc, exc_info=True)
+
+    def _get_active_model_label(self) -> str:
+        try:
+            provider = self._get_selected_provider()
+            if not provider:
+                logger.warning("Aucun provider IA actif pour mettre à jour le titre.")
+                return "Modèle non sélectionné"
+
+            model_candidate = None
+            for attr_name in ("model", "_model_name"):
+                if hasattr(provider, attr_name):
+                    model_candidate = getattr(provider, attr_name)
+                    break
+
+            if not model_candidate:
+                model_candidate = provider.name.value
+
+            model_label = str(model_candidate)
+            logger.info("Modèle IA actif détecté pour le titre: %s", model_label)
+            return model_label
+        except Exception as exc:
+            logger.error("Erreur lors de la récupération du modèle actif: %s", exc, exc_info=True)
+            return "Modèle inconnu"
+
+    def _update_top_bar_title(self) -> None:
+        try:
+            model_label = self._get_active_model_label()
+            title_text = f"Assistant Vinted - {model_label}"
+
+            if self.title_label:
+                self.title_label.configure(text=title_text)
+
+            self.title(title_text)
+            logger.info("Titre de l'application mis à jour: %s", title_text)
+        except Exception as exc:
+            logger.error("Erreur lors de la mise à jour du titre de l'application: %s", exc, exc_info=True)
 
     # ------------------------------------------------------------------
     # Menu paramètres (provider + clés API)
