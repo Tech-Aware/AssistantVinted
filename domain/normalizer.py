@@ -140,7 +140,9 @@ def _cleanup_pull_tommy_description(description: Optional[str]) -> str:
 
         for line in lines:
             stripped = line.strip().lower()
-            if stripped.startswith("sku"):
+            # On filtre toute ligne qui contient une mention SKU en début de texte,
+            # même si la casse, les deux-points ou les espaces varient.
+            if re.match(r"^\s*sku\b", stripped, flags=re.IGNORECASE):
                 logger.debug(
                     "_cleanup_pull_tommy_description: suppression ligne SKU: %s", line
                 )
