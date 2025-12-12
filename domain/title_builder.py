@@ -76,17 +76,31 @@ def _sanitize_model_label(value: Optional[str]) -> Optional[str]:
             "curve",
             "curvy",
         )
+        drop_markers = {"demi", "cut"}
 
         cleaned_tokens: List[str] = []
         for token in raw.replace("/", " ").replace("-", " ").split():
-            token_low = token.lower()
-            if any(marker in token_low for marker in fit_markers):
-                logger.debug("_sanitize_model_label: token coupe ignoré: %s", token)
-                continue
-            cleaned_tokens.append(token)
+            try:
+                token_low = token.lower()
+                if any(marker in token_low for marker in fit_markers):
+                    logger.debug("_sanitize_model_label: token coupe ignoré: %s", token)
+                    continue
+                if token_low in drop_markers:
+                    logger.debug("_sanitize_model_label: token supprimé (marker): %s", token)
+                    continue
+                cleaned_tokens.append(token)
+            except Exception as exc_inner:  # pragma: no cover - defensive
+                logger.warning(
+                    "_sanitize_model_label: token %s non traité (%s)", token, exc_inner
+                )
 
         cleaned = " ".join(cleaned_tokens).strip()
-        return cleaned or raw
+        if not cleaned:
+            logger.debug(
+                "_sanitize_model_label: modèle vidé après nettoyage (entrée: %s)", value
+            )
+            return None
+        return cleaned
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning("_sanitize_model_label: échec de nettoyage (%s)", exc)
         return value

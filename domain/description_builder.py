@@ -141,9 +141,15 @@ def _build_hashtags(
                 add(f"#{model_number}")
 
             model_tokens: List[str] = []
+            drop_markers = {"demi", "curve", "curvy", "cut"}
             for token in model_low.replace("/", " ").split():
                 token_clean = token.replace("'", "").replace("-", "")
                 if token_clean == model_number or token_clean.isdigit():
+                    continue
+                if token_clean in drop_markers:
+                    logger.debug(
+                        "_build_hashtags: token modèle ignoré (marker): %s", token
+                    )
                     continue
                 if token_clean:
                     model_tokens.append(token_clean)
