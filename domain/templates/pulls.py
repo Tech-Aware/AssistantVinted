@@ -70,8 +70,8 @@ FOCUS ON:
 
 8) TAILLE ET MESURES À PLAT:
    - Respect the UI measurement mode:
-     - If the UI says "étiquettes lisibles" (measurement_mode=etiquette): do NOT estimate size from measurements; rely only on labels.
-     - If the UI says "analyser les mesures" (measurement_mode=mesures): consider the size label missing and estimate the size (XS, S, M, L, XL, XXL, ...) from flat measurements.
+     - If the UI says "étiquettes lisibles" (measurement_mode=etiquette): do NOT estimate size from measurements; rely only on labels. Ne pas lister de mesures chiffrées dans la description, même si elles sont visibles sur les photos.
+     - If the UI says "analyser les mesures" (measurement_mode=mesures): consider the size label missing and estimate the size (XS, S, M, L, XL, XXL, ...) from flat measurements. Ne pas lister les valeurs de mesures; déduire la taille et ajouter la mention ci-dessous.
    - In the description, immediately after the size mention: add "Taille estimée à la main à partir des mesures à plat (voir photos)." when the size is deduced.
 
 9) ÉTIQUETTES MANQUANTES:
@@ -80,19 +80,22 @@ FOCUS ON:
    - If both missing: mention "Etiquette taille et composition coupées pour plus de confort".
 
 10) TITLE & DESCRIPTION (FRENCH):
-   - title:
-     - concise, clear, French.
-     - Must include brand (if visible), garment type (pull/gilet/cardigan), motif/pattern, and the composition rule above.
-   - description (no markdown):
+   - title (format cible):
+     - Inclure systématiquement: marque si lisible + type (pull/gilet/cardigan) + genre (femme/homme/unisexe) + taille (étiquette ou estimée) + motif/pattern + matière principale selon les règles ci-dessus + type de col si clair + suffixe SKU (ex: "- PTF118").
+     - Exemples: "Pull Tommy Hilfiger femme taille M 100% coton rouge torsadé col V - PTF118", "Gilet Tommy Hilfiger homme taille L laine bleu rayé col châle - PTF42".
+   - description (pas de markdown, pas de valeurs chiffrées de mesures):
      - type de maille/coupe + col,
      - motif et couleurs (toujours rappeler le motif),
      - marque si connue,
      - composition lisible + mentions Premium/pima coton si applicable,
      - saison d'usage,
      - état/défauts,
-     - note sur taille estimée si applicable,
+     - taille (mentionner l'estimation le cas échéant),
      - mention sur étiquettes coupées si applicable,
-     - hashtags pertinents en fin de description pour la recherche (ex: #tommyhilfiger #pulltommy #preloved ...).
+     - phrases courtes structurées en plusieurs lignes (pas de bloc unique),
+     - ajouter la phrase "📏 Mesures détaillées visibles en photo pour plus de précisions." sans lister de chiffres,
+     - terminer par les hashtags pertinents en fin de description pour la recherche (ex: #tommyhilfiger #pulltommy #preloved ...),
+     - ne jamais insérer de ligne "SKU" ou de numéro interne dans la description.
 
 JSON SCHEMA:
 - Use the SAME JSON keys as defined in the main prompt contract:
