@@ -232,7 +232,17 @@ def build_full_prompt(profile: Any, ui_data: Dict[str, Any] | None = None) -> st
         measurement_profiles = {"polaire_outdoor", "pull_tommy"}
 
         extra_instructions: list[str] = []
-        if profile.name.value in measurement_profiles and measurement_mode:
+        if profile.name.value in measurement_profiles:
+            extra_instructions.append(
+                "NE JAMAIS lister de valeurs chiffrées de mesures dans la description," 
+                " même si les photos montrent un mètre ruban. Se limiter à la phrase"
+                " sur les mesures en photo."
+            )
+            extra_instructions.append(
+                "NE JAMAIS ajouter de ligne SKU ou numéro interne dans la description"
+                " (SKU uniquement dans le titre)."
+            )
+
             if measurement_mode == "etiquette":
                 extra_instructions.append(
                     "MODE UI = ÉTIQUETTES LISIBLES : baser la taille uniquement sur"

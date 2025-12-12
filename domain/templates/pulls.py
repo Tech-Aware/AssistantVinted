@@ -84,18 +84,16 @@ FOCUS ON:
      - Inclure systématiquement: marque si lisible + type (pull/gilet/cardigan) + genre (femme/homme/unisexe) + taille (étiquette ou estimée) + motif/pattern + matière principale selon les règles ci-dessus + type de col si clair + suffixe SKU (ex: "- PTF118").
      - Exemples: "Pull Tommy Hilfiger femme taille M 100% coton rouge torsadé col V - PTF118", "Gilet Tommy Hilfiger homme taille L laine bleu rayé col châle - PTF42".
    - description (pas de markdown, pas de valeurs chiffrées de mesures):
-     - type de maille/coupe + col,
-     - motif et couleurs (toujours rappeler le motif),
-     - marque si connue,
-     - composition lisible + mentions Premium/pima coton si applicable,
-     - saison d'usage,
-     - état/défauts,
-     - taille (mentionner l'estimation le cas échéant),
-     - mention sur étiquettes coupées si applicable,
-     - phrases courtes structurées en plusieurs lignes (pas de bloc unique),
-     - ajouter la phrase "📏 Mesures détaillées visibles en photo pour plus de précisions." sans lister de chiffres,
-     - terminer par les hashtags pertinents en fin de description pour la recherche (ex: #tommyhilfiger #pulltommy #preloved ...),
-     - ne jamais insérer de ligne "SKU" ou de numéro interne dans la description.
+     - Structure obligatoire, chaque puce doit apparaître sur sa propre ligne (séparée par des retours à la ligne, pas de markdown ni de bloc unique) :
+       1) type de maille + genre + taille (ajouter la mention d'estimation si mode mesures),
+       2) motif + couleurs + type de col,
+       3) composition lisible + mention Premium/pima coton si applicable,
+       4) saison d'usage,
+       5) état/défauts (rappeler le motif si cohérent),
+       6) mention sur étiquettes coupées si applicable,
+       7) phrase "📏 Mesures détaillées visibles en photo pour plus de précisions." sans aucune valeur chiffrée,
+       8) ligne hashtags de recherche en fin de texte.
+     - Interdiction formelle d'ajouter une ligne "SKU" ou un numéro interne dans la description (les SKU ne doivent apparaître que dans le suffixe du titre).
 
 JSON SCHEMA:
 - Use the SAME JSON keys as defined in the main prompt contract:
