@@ -124,6 +124,81 @@ def _safe_join(parts: List[str]) -> str:
     return " ".join(p for p in parts if p and p.strip())
 
 
+def _normalize_garment_type(value: Optional[str]) -> Optional[str]:
+    """Uniformise le type (pull / gilet / cardigan)."""
+    if not value:
+        return None
+    try:
+        low = value.strip().lower()
+        if "gilet" in low or "cardi" in low:
+            return "Gilet"
+        return "Pull"
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("_normalize_garment_type: impossible de lire %s (%s)", value, exc)
+        return None
+
+
+def _normalize_colors(value: Optional[Any]) -> List[str]:
+    """Nettoie une liste de couleurs en entrée (liste ou chaîne séparée par virgules)."""
+    try:
+        if value is None:
+            return []
+        colors: List[str] = []
+        if isinstance(value, list):
+            iterator = value
+        else:
+            iterator = str(value).replace("/", ",").split(",")
+
+        for raw in iterator:
+            color = str(raw).strip()
+            if not color:
+                continue
+            colors.append(color)
+
+        return colors
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("_normalize_colors: échec normalisation (%s)", exc)
+        return []
+
+
+def _format_material_segment(
+    material: Optional[str],
+    cotton_percent: Optional[Any],
+    wool_percent: Optional[Any],
+) -> Optional[str]:
+    """Construit un segment matière lisible (coton/laine) sans inventer."""
+    try:
+        parts: List[str] = []
+        cotton_value: Optional[int] = None
+        wool_value: Optional[int] = None
+
+        try:
+            cotton_value = int(cotton_percent) if cotton_percent is not None else None
+        except (TypeError, ValueError):
+            logger.debug("_format_material_segment: cotton illisible (%s)", cotton_percent)
+
+        try:
+            wool_value = int(wool_percent) if wool_percent is not None else None
+        except (TypeError, ValueError):
+            logger.debug("_format_material_segment: wool illisible (%s)", wool_percent)
+
+        if cotton_value is not None:
+            parts.append(f"{cotton_value}% coton" if cotton_value >= 90 else "coton")
+
+        if wool_value is not None:
+            parts.append(f"{wool_value}% laine" if wool_value >= 90 else "laine")
+
+        if material:
+            material_clean = material.strip()
+            if material_clean and material_clean.lower() not in " ".join(parts).lower():
+                parts.append(material_clean)
+
+        return " ".join(parts) if parts else None
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("_format_material_segment: échec (%s)", exc)
+        return None
+
+
 def _classify_rise_from_cm(rise_cm: Optional[float]) -> Optional[str]:
     """
     Classe la taille (rise) à partir de la distance entre entrejambe
@@ -314,3 +389,58 @@ def build_jean_levis_title(features: Dict[str, Any]) -> str:
 
     logger.debug("Titre jean Levi's construit à partir de %s -> '%s'", features, title)
     return title
+
+
+def build_pull_tommy_title(features: Dict[str, Any]) -> str:
+    """Construit un titre pour les pulls/gilets Tommy Hilfiger."""
+    try:
+        brand = _normalize_str(features.get("brand"))
+        garment_type = _normalize_garment_type(features.get("garment_type")) or "Pull"
+        gender = _normalize_gender(_normalize_str(features.get("gender")))
+        size = _normalize_str(features.get("size"))
+        neckline = _normalize_str(features.get("neckline"))
+        pattern = _normalize_str(features.get("pattern"))
+        material = _format_material_segment(
+            _normalize_str(features.get("material")),
+            features.get("cotton_percent"),
+            features.get("wool_percent"),
+        )
+
+        colors_input = features.get("main_colors") or features.get("colors")
+        colors = _normalize_colors(colors_input)
+        colors_segment = ", ".join(colors) if colors else None
+
+        sku = _normalize_str(features.get("sku"))
+
+        parts: List[str] = [garment_type]
+
+        if brand:
+            parts.append(brand)
+
+        if gender:
+            parts.append(gender)
+
+        if size:
+            parts.append(f"taille {size}")
+
+        if material:
+            parts.append(material)
+
+        if colors_segment:
+            parts.append(colors_segment)
+
+        if pattern:
+            parts.append(pattern)
+
+        if neckline:
+            parts.append(f"col {neckline}")
+
+        if sku:
+            parts.append(f"{SKU_PREFIX}{sku}")
+
+        title = _safe_join(parts)
+        logger.debug("Titre pull Tommy construit à partir de %s -> '%s'", features, title)
+        return title
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("build_pull_tommy_title: échec de construction (%s)", exc)
+        return _safe_join(["Pull Tommy Hilfiger"])
