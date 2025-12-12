@@ -559,6 +559,10 @@ def build_pull_tommy_title(features: Dict[str, Any]) -> str:
                 "build_pull_tommy_title: SKU ignoré car statut non 'ok' (%s)",
                 sku_status,
             )
+        else:
+            logger.debug(
+                "build_pull_tommy_title: SKU absent ou illisible (statut=%s)", sku_status
+            )
 
         title = _safe_join(parts)
         logger.debug("Titre pull Tommy construit à partir de %s -> '%s'", features, title)

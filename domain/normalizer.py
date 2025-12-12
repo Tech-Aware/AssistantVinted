@@ -365,10 +365,21 @@ def build_features_for_pull_tommy(
         main_colors = raw_features.get("main_colors") or raw_features.get("colors")
         gender = ui_data.get("gender") or raw_features.get("gender")
         size = ui_data.get("size") or raw_features.get("size") or ai_data.get("size")
-        sku = ui_data.get("sku") or raw_features.get("sku") or ai_data.get("sku")
+        sku_source = "ai"
+        sku = raw_features.get("sku") or ai_data.get("sku")
+        if ui_data.get("sku") is not None:
+            sku = ui_data.get("sku")
+            sku_source = "ui"
+
         sku_status = raw_features.get("sku_status") or ai_data.get("sku_status")
         if not sku_status:
-            sku_status = "missing" if sku is None else "ok"
+            sku_status = "ok" if sku_source == "ui" and sku is not None else "missing"
+            logger.debug(
+                "build_features_for_pull_tommy: statut SKU par défaut '%s' (source=%s, sku=%s)",
+                sku_status,
+                sku_source,
+                sku,
+            )
 
         features: Dict[str, Any] = {
             "brand": brand,
