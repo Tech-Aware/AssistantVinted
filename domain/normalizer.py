@@ -365,19 +365,25 @@ def build_features_for_pull_tommy(
         main_colors = raw_features.get("main_colors") or raw_features.get("colors")
         gender = ui_data.get("gender") or raw_features.get("gender")
         size = ui_data.get("size") or raw_features.get("size") or ai_data.get("size")
-        sku_source = "ai"
-        sku = raw_features.get("sku") or ai_data.get("sku")
-        if ui_data.get("sku") is not None:
-            sku = ui_data.get("sku")
-            sku_source = "ui"
+        sku_from_ui = ui_data.get("sku")
+        sku_from_ai = raw_features.get("sku") or ai_data.get("sku")
+        sku_source = "ui" if sku_from_ui is not None else "ai"
+        sku = sku_from_ui if sku_from_ui is not None else sku_from_ai
 
         sku_status = raw_features.get("sku_status") or ai_data.get("sku_status")
-        if not sku_status:
-            sku_status = "ok" if sku_source == "ui" and sku is not None else "missing"
+        if sku_source == "ai":
+            if sku:
+                logger.info(
+                    "build_features_for_pull_tommy: SKU IA ignoré pour éviter les hallucinations (%s)",
+                    sku,
+                )
+            sku = None
+            sku_status = "missing"
+        else:
+            if not sku_status or sku_status.lower() != "ok":
+                sku_status = "ok"
             logger.debug(
-                "build_features_for_pull_tommy: statut SKU par défaut '%s' (source=%s, sku=%s)",
-                sku_status,
-                sku_source,
+                "build_features_for_pull_tommy: SKU fourni via UI conservé (%s)",
                 sku,
             )
 
