@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Dict, Any, List, Optional
+import re
 import logging
 
 logger = logging.getLogger(__name__)
@@ -161,6 +162,30 @@ def _normalize_colors(value: Optional[Any]) -> List[str]:
         return []
 
 
+def _format_colors_segment(value: Optional[Any]) -> Optional[str]:
+    """Formate les couleurs en limitant le bruit et les doublons."""
+    try:
+        colors = _normalize_colors(value)
+        unique: List[str] = []
+        seen = set()
+        for color in colors:
+            color_key = color.strip().lower()
+            if not color_key or color_key in seen:
+                continue
+            seen.add(color_key)
+            unique.append(color_key)
+
+        if not unique:
+            return None
+
+        max_colors = 3
+        limited = unique[:max_colors]
+        return ", ".join(limited)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("_format_colors_segment: échec (%s)", exc)
+        return None
+
+
 def _format_material_segment(
     material: Optional[str],
     cotton_percent: Optional[Any],
@@ -168,7 +193,6 @@ def _format_material_segment(
 ) -> Optional[str]:
     """Construit un segment matière lisible (coton/laine) sans inventer."""
     try:
-        parts: List[str] = []
         cotton_value: Optional[int] = None
         wool_value: Optional[int] = None
 
@@ -182,20 +206,93 @@ def _format_material_segment(
         except (TypeError, ValueError):
             logger.debug("_format_material_segment: wool illisible (%s)", wool_percent)
 
+        material_label = (material or "").strip().lower()
+        priority_mapping = {
+            "cachemire": "cachemire",
+            "cashmere": "cachemire",
+            "laine": "laine",
+            "wool": "laine",
+            "lin": "lin",
+            "linen": "lin",
+            "satin": "satin",
+        }
+
+        # --- Matières prioritaires (laine / cachemire / lin / satin) -----
+        if wool_value is not None and wool_value > 0:
+            wool_segment = f"{wool_value}% laine" if wool_value >= 1 else "laine"
+            return wool_segment.lower()
+
+        for keyword, label in priority_mapping.items():
+            if keyword in material_label:
+                return label
+
+        # --- Coton (uniquement si >= 60%) --------------------------------
         if cotton_value is not None:
-            parts.append(f"{cotton_value}% coton" if cotton_value >= 90 else "coton")
+            if cotton_value >= 60:
+                return f"{cotton_value}% coton"
+            return "coton"
 
-        if wool_value is not None:
-            parts.append(f"{wool_value}% laine" if wool_value >= 90 else "laine")
+        if material_label:
+            if "coton" in material_label or "cotton" in material_label:
+                return "coton"
 
-        if material:
-            material_clean = material.strip()
-            if material_clean and material_clean.lower() not in " ".join(parts).lower():
-                parts.append(material_clean)
-
-        return " ".join(parts) if parts else None
+        return None
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning("_format_material_segment: échec (%s)", exc)
+        return None
+
+
+def _format_neckline(neckline: Optional[str]) -> Optional[str]:
+    """Nettoie le col pour éviter les doublons de 'col'."""
+    if not neckline:
+        return None
+    try:
+        neck = neckline.strip()
+        neck_lower = neck.lower()
+        if neck_lower.startswith("col"):
+            neck = neck.split(" ", 1)[-1] if " " in neck else ""
+        neck = neck.strip()
+        if not neck:
+            return None
+        return f"col {neck}"
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("_format_neckline: échec (%s)", exc)
+        return None
+
+
+def _normalize_pull_size(value: Optional[str]) -> Optional[str]:
+    """Uniformise les tailles sur l'échelle XXXXS -> XXXXXL."""
+    if not value:
+        return None
+    try:
+        raw = str(value).strip().upper()
+        raw = raw.replace(" ", "")
+        if "/" in raw:
+            raw = raw.split("/")[0]
+        if raw.endswith("P"):
+            raw = raw[:-1]
+
+        numeric_match = re.match(r"^(\d+)X$", raw)
+        if numeric_match:
+            count = int(numeric_match.group(1)) + 1
+            return f"{'X' * count}L"
+
+        if raw == "M":
+            return "M"
+
+        match = re.match(r"^(X{0,5})(S|L)$", raw)
+        if match:
+            prefix, base = match.groups()
+            normalized = f"{prefix}{base}"
+            return normalized if normalized else None
+
+        allowed_sizes = {"XS", "S", "L", "XL", "XXL", "XXXL", "XXXXL", "XXXXXL", "XXXS", "XXXXS"}
+        if raw in allowed_sizes:
+            return raw
+
+        return raw or None
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("_normalize_pull_size: échec (%s)", exc)
         return None
 
 
@@ -397,8 +494,8 @@ def build_pull_tommy_title(features: Dict[str, Any]) -> str:
         brand = _normalize_str(features.get("brand"))
         garment_type = _normalize_garment_type(features.get("garment_type")) or "Pull"
         gender = _normalize_gender(_normalize_str(features.get("gender")))
-        size = _normalize_str(features.get("size"))
-        neckline = _normalize_str(features.get("neckline"))
+        size = _normalize_pull_size(_normalize_str(features.get("size")))
+        neckline = _format_neckline(_normalize_str(features.get("neckline")))
         pattern = _normalize_str(features.get("pattern"))
         material = _format_material_segment(
             _normalize_str(features.get("material")),
@@ -407,10 +504,11 @@ def build_pull_tommy_title(features: Dict[str, Any]) -> str:
         )
 
         colors_input = features.get("main_colors") or features.get("colors")
-        colors = _normalize_colors(colors_input)
-        colors_segment = ", ".join(colors) if colors else None
+        colors_segment = _format_colors_segment(colors_input)
 
         sku = _normalize_str(features.get("sku"))
+        if not brand:
+            brand = "Tommy Hilfiger"
 
         parts: List[str] = [garment_type]
 
@@ -433,7 +531,7 @@ def build_pull_tommy_title(features: Dict[str, Any]) -> str:
             parts.append(pattern)
 
         if neckline:
-            parts.append(f"col {neckline}")
+            parts.append(neckline)
 
         if sku:
             parts.append(f"{SKU_PREFIX}{sku}")
