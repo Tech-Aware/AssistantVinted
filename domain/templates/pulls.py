@@ -84,22 +84,19 @@ FOCUS ON:
      - Inclure systématiquement: marque si lisible + type (pull/gilet/cardigan) + genre (femme/homme/unisexe) + taille (étiquette ou estimée) + motif/pattern + matière principale selon les règles ci-dessus + type de col si clair + suffixe SKU (ex: "- PTF118").
      - Exemples: "Pull Tommy Hilfiger femme taille M 100% coton rouge torsadé col V - PTF118", "Gilet Tommy Hilfiger homme taille L laine bleu rayé col châle - PTF42".
    - description (pas de markdown, pas de valeurs chiffrées de mesures):
-     - Copie la mise en forme stricte utilisée sur les jeans Levi's : chaque ligne séparée par un simple retour à la ligne (pas de puces markdown) et le corps organisé en blocs courts. Respecte EXACTEMENT l'ordre suivant, sans ajouter d'autres phrases entre ces lignes :
-       1) "Pull/Gilet Tommy Hilfiger pour <Genre> taille <Taille>." (ajouter la mention d'estimation si mode mesures),
-       2) ligne motif + couleurs + type de col (ex: "Maille torsadée rouge avec col V."),
-       3) LIGNE VIDE pour séparer le bloc d'accroche du bloc composition,
-       4) ligne composition lisible + mention Premium/pima coton si applicable (ex: "Composition : 100% coton.", "Composition : mélange avec laine.", "Premium 100% pima coton."),
-       5) ligne saison d'usage (ex: "Idéal mi-saison" ou "Pour l'hiver"),
-       6) LIGNE VIDE pour séparer le bloc composition du bloc état,
-       7) ligne état/défauts (ex: "Très bon état" ou "Léger boulochage sur manches"),
-       8) ligne mention étiquettes coupées si applicable ("Etiquette de taille coupée pour plus de confort", etc.),
-       9) ligne "📏 Mesures détaillées visibles en photo pour plus de précisions." sans aucune valeur chiffrée,
-       10) ligne "📦 Envoi rapide et soigné" pour rassurer sur la livraison,
-       11) LIGNE VIDE pour séparer le bloc principal des appels à l'action,
-       12) ligne call-to-action vers la collection (ex: "✨ Retrouvez tous mes pulls Tommy femme ici 👉 #durin31tfXL"),
-       13) ligne conseil lot/reduction (ex: "💡 Pensez à faire un lot..."),
-       14) ligne hashtags de recherche en fin de texte, sans ligne SKU.
-     - Interdiction formelle d'ajouter une ligne "SKU" ou un numéro interne dans la description (les SKU ne doivent apparaître que dans le suffixe du titre). Ne jamais insérer de valeurs de mesures chiffrées dans la description, même si elles sont visibles sur les photos. Les lignes vides ci-dessus sont OBLIGATOIRES pour séparer clairement les blocs, comme dans l'exemple fourni.
+     - Utilise la mise en forme inspirée des jeans Levi's avec des paragraphes courts séparés par des lignes vides pour l'aération. Suis l'ordre suivant et insère une ligne vide entre chaque bloc ; ajoute aussi une ligne vide juste avant les hashtags :
+       1) accroche : "Pull/Gilet Tommy Hilfiger pour <Genre> taille <Taille>." (ajoute la mention d'estimation si mode mesures),
+       2) motif + couleurs + type de col (ex: "Maille torsadée rouge avec col V."),
+       3) composition lisible + mention Premium/pima coton si applicable (ex: "Composition : 100% coton.", "Composition : mélange avec laine.", "Premium 100% pima coton."),
+       4) saison d'usage (ex: "Idéal mi-saison" ou "Pour l'hiver"),
+       5) état/défauts (ex: "Très bon état" ou "Léger boulochage sur manches"),
+       6) mention étiquettes coupées si applicable ("Etiquette de taille coupée pour plus de confort", etc.),
+       7) phrase mesures en photo sans chiffres : "📏 Mesures détaillées visibles en photo pour plus de précisions.",
+       8) phrase livraison : "📦 Envoi rapide et soigné",
+       9) call-to-action vers la collection (ex: "✨ Retrouvez tous mes pulls Tommy femme ici 👉 #durin31tfXL"),
+       10) conseil lot/réduction (ex: "💡 Pensez à faire un lot..."),
+       11) hashtags de recherche en fin de texte après une ligne vide, sans ligne SKU.
+     - Interdiction formelle d'ajouter une ligne "SKU" ou un numéro interne dans la description (les SKU ne doivent apparaître que dans le suffixe du titre). Ne jamais insérer de valeurs de mesures chiffrées dans la description, même si elles sont visibles sur les photos. Les lignes vides servent uniquement à séparer clairement les blocs et à aérer la lecture.
 
 JSON SCHEMA:
 - Use the SAME JSON keys as defined in the main prompt contract:
