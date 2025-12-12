@@ -124,38 +124,53 @@ def _extract_fit_from_text(text: str) -> Optional[str]:
 
 
 def _cleanup_pull_tommy_description(description: Optional[str]) -> str:
-    """Supprime les lignes SKU et assure une ligne vide avant les hashtags.
+    """Supprime les mentions SKU et aère la description pull Tommy.
 
     Cette étape ajoute un filet de sécurité post-génération pour les pulls Tommy
-    afin d'éviter qu'une ligne « SKU : » n'apparaisse en pied de description,
-    même si le LLM la renvoie.
+    afin d'éviter qu'une ligne « SKU » ne fuite dans la description et garantit
+    un espacement cohérent avant les hashtags.
     """
 
     try:
         if not description:
+            logger.info("_cleanup_pull_tommy_description: description vide ou None")
             return description or ""
+
+        logger.debug("_cleanup_pull_tommy_description: entrée brute = %r", description)
 
         lines = description.split("\n")
         filtered: list[str] = []
 
         for line in lines:
-            stripped = line.strip().lower()
-            # On filtre toute ligne qui contient une mention SKU en début de texte,
-            # même si la casse, les deux-points ou les espaces varient.
-            if re.match(r"^\s*sku\b", stripped, flags=re.IGNORECASE):
+            stripped = line.strip()
+            # On filtre toute ligne qui contient une mention SKU, même au milieu
+            # du texte, pour éviter les pieds de page résiduels.
+            if re.search(r"\bsku\b", stripped, flags=re.IGNORECASE):
                 logger.debug(
                     "_cleanup_pull_tommy_description: suppression ligne SKU: %s", line
                 )
                 continue
             filtered.append(line)
 
-        with_spacing: list[str] = []
+        # Nettoyage des espacements :
+        # - suppression des blancs en tête/pied,
+        # - insertion d'une ligne vide avant le bloc de hashtags s'il n'existe pas déjà,
+        # - réduction des doublons de lignes vides.
+        trimmed: list[str] = []
         for line in filtered:
-            if line.strip().startswith("#") and (not with_spacing or with_spacing[-1].strip()):
-                with_spacing.append("")
-            with_spacing.append(line)
+            if not line.strip():
+                if trimmed and trimmed[-1].strip():
+                    trimmed.append("")
+                continue
+            if line.strip().startswith("#") and trimmed and trimmed[-1].strip():
+                trimmed.append("")
+            trimmed.append(line)
 
-        cleaned = "\n".join(with_spacing).strip()
+        # Supprime une éventuelle ligne vide finale
+        while trimmed and not trimmed[-1].strip():
+            trimmed.pop()
+
+        cleaned = "\n".join(trimmed)
         logger.debug(
             "_cleanup_pull_tommy_description: description nettoyée = %s", cleaned
         )
