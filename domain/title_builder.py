@@ -504,7 +504,14 @@ def build_pull_tommy_title(features: Dict[str, Any]) -> str:
     try:
         brand = _normalize_str(features.get("brand"))
         garment_type = _normalize_garment_type(features.get("garment_type")) or "Pull"
-        gender = _normalize_gender(_normalize_str(features.get("gender")))
+        raw_gender = _normalize_gender(_normalize_str(features.get("gender")))
+        gender = "femme"
+        if raw_gender and raw_gender.lower() != "femme":
+            logger.debug(
+                "build_pull_tommy_title: genre forcé à femme (entrée=%s)", raw_gender
+            )
+        elif raw_gender:
+            gender = raw_gender
         size = _normalize_pull_size(_normalize_str(features.get("size")))
         neckline = _format_neckline(_normalize_str(features.get("neckline")))
         pattern = _normalize_str(features.get("pattern"))
@@ -518,6 +525,7 @@ def build_pull_tommy_title(features: Dict[str, Any]) -> str:
         colors_segment = _format_colors_segment(colors_input)
 
         sku = _normalize_str(features.get("sku"))
+        sku_status = _normalize_str(features.get("sku_status"))
         if not brand:
             brand = "Tommy Hilfiger"
 
@@ -544,8 +552,13 @@ def build_pull_tommy_title(features: Dict[str, Any]) -> str:
         if neckline:
             parts.append(neckline)
 
-        if sku:
+        if sku and sku_status and sku_status.lower() == "ok":
             parts.append(f"{SKU_PREFIX}{sku}")
+        elif sku:
+            logger.debug(
+                "build_pull_tommy_title: SKU ignoré car statut non 'ok' (%s)",
+                sku_status,
+            )
 
         title = _safe_join(parts)
         logger.debug("Titre pull Tommy construit à partir de %s -> '%s'", features, title)
