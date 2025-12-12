@@ -42,7 +42,14 @@ def _normalize_fit(value: Optional[str]) -> Optional[str]:
         return "Straight/Droit"
 
     # Bootcut / Évasé / Flare
-    if "bootcut" in v or "flare" in v or "évasé" in v or "evase" in v:
+    if (
+        "bootcut" in v
+        or "flare" in v
+        or "évasé" in v
+        or "evase" in v
+        or "curve" in v
+        or "curvy" in v
+    ):
         return "Bootcut/Évasé"
 
     # Sinon, on garde la valeur telle quelle (juste trimée)
@@ -137,6 +144,17 @@ def build_jean_levis_title(features: Dict[str, Any]) -> str:
     if not rise_type:
         rise_cm = features.get("rise_cm")
         rise_type = _classify_rise_from_cm(rise_cm)
+    else:
+        try:
+            normalized_rise = rise_type.strip().lower()
+            if "basse" in normalized_rise:
+                rise_type = "low"
+            elif "haute" in normalized_rise:
+                rise_type = "high"
+            elif "moy" in normalized_rise:
+                rise_type = "mid"
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("build_jean_levis_title: rise_type illisible (%s)", exc)
 
     # Normalisation d'affichage de la taille US :
     # - si déjà au format "W28", on garde tel quel

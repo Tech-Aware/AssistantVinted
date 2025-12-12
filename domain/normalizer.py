@@ -132,8 +132,15 @@ def _normalize_fit_label(raw_fit: Optional[str]) -> Optional[str]:
         return None
 
     low = str(raw_fit).lower().strip()
-    if low in ("boot cut", "bootcut", "boot-cut"):
+    boot_markers = {"boot cut", "bootcut", "boot-cut", "flare", "curve", "curvy"}
+    if any(marker in low for marker in boot_markers):
         return "Boot Cut/Évasé"
+
+    if "skinny" in low or "slim" in low:
+        return "Skinny"
+
+    if "straight" in low or "droit" in low:
+        return "Straight/Droit"
 
     return raw_fit
 

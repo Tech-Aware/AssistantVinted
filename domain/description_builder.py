@@ -39,11 +39,11 @@ def _format_rise_label(rise_type: Optional[str], rise_cm: Optional[Any]) -> str:
         else:
             normalized = ""
 
-        if normalized in {"low", "ultra_low"}:
+        if normalized in {"low", "ultra_low"} or "basse" in normalized:
             return "taille basse"
-        if normalized == "high":
+        if normalized == "high" or "haute" in normalized:
             return "taille haute"
-        if normalized == "mid":
+        if normalized == "mid" or "moy" in normalized:
             return "taille moyenne"
 
         if rise_cm is not None:
@@ -86,8 +86,11 @@ def _build_state_sentence(defects: Optional[str]) -> str:
     try:
         clean_defects = _normalize_defects(defects)
         if not clean_defects:
-            return "Très bon état général."
-        return f"Bon état général, légères traces d'usage : {clean_defects} (voir photos)."
+            return "Très bon état."
+        return (
+            "Très bon état. Légères traces d'usage : "
+            f"{clean_defects} (voir photos)."
+        )
     except Exception as exc:  # pragma: no cover - defensive
         logger.error("_build_state_sentence: erreur %s", exc)
         return "État non précisé (voir photos)."
@@ -122,17 +125,21 @@ def _build_hashtags(
             add(f"#levis{gender_token}")
 
         if model:
-            add(f"#levis{model}")
+            model_clean = model.lower().replace(" ", "")
+            add(f"#levis{model_clean}")
 
         if fit:
             fit_low = fit.lower().strip()
             fit_key = fit_low.replace("é", "e")
-            if "boot" in fit_key and "cut" in fit_key:
+            boot_markers = {"bootcut", "boot cut", "boot-cut", "flare", "curve", "curvy"}
+            if any(marker in fit_key for marker in boot_markers):
                 fit_token = "bootcut"
+            elif "skinny" in fit_key or "slim" in fit_key:
+                fit_token = "skinny"
+            elif "straight" in fit_key or "droit" in fit_key:
+                fit_token = "straightdroit"
             else:
-                fit_token = (
-                    fit_low.replace(" ", "").replace("/", "").replace("é", "e")
-                )
+                fit_token = fit_key.replace(" ", "").replace("/", "")
             add(f"#{fit_token}jean")
 
         if color:
@@ -201,6 +208,30 @@ def _strip_footer_lines(description: str) -> str:
         return description
 
 
+def _normalize_fit_display(raw_fit: Optional[str]) -> str:
+    try:
+        if not raw_fit:
+            return "coupe non précisée"
+
+        value = raw_fit.strip()
+        low = value.lower()
+
+        boot_markers = ("boot", "flare", "évas", "evase", "curve", "curvy")
+        if any(marker in low for marker in boot_markers):
+            return "Bootcut/Évasé"
+
+        if "skinny" in low or "slim" in low:
+            return "Skinny"
+
+        if "straight" in low or "droit" in low:
+            return "Straight/Droit"
+
+        return value
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("_normalize_fit_display: erreur %s", exc)
+        return "coupe non précisée"
+
+
 # ---------------------------------------------------------------------------
 # Génération de description pour jean Levi's
 # ---------------------------------------------------------------------------
@@ -220,7 +251,8 @@ def build_jean_levis_description(
 
         brand = _safe_clean(features.get("brand")) or "Levi's"
         model = _safe_clean(features.get("model"))
-        fit = _safe_clean(features.get("fit")) or "coupe non précisée"
+        raw_fit = _safe_clean(features.get("fit"))
+        fit = _normalize_fit_display(raw_fit)
         color = _safe_clean(features.get("color"))
         size_fr = _safe_clean(features.get("size_fr"))
         size_us = _safe_clean(features.get("size_us"))
