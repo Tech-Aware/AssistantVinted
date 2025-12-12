@@ -10,13 +10,17 @@ from .base import AnalysisProfile, AnalysisProfileName, BASE_LISTING_SCHEMA
 logger = logging.getLogger(__name__)
 
 
-PULLS_PROFILES: Dict[AnalysisProfileName, AnalysisProfile] = {
-    AnalysisProfileName.PULL_TOMMY: AnalysisProfile(
-        name=AnalysisProfileName.PULL_TOMMY,
-        prompt_suffix=r"""
-PROFILE TYPE: PULL TOMMY HILFIGER / PREPPY KNIT
+def _build_pull_profiles() -> Dict[AnalysisProfileName, AnalysisProfile]:
+    """Construit les profils liés aux pulls avec logs et gestion d'erreurs."""
 
-The item is a knit sweater (pull) with a preppy / Tommy Hilfiger style.
+    try:
+        profiles: Dict[AnalysisProfileName, AnalysisProfile] = {
+            AnalysisProfileName.PULL_TOMMY: AnalysisProfile(
+                name=AnalysisProfileName.PULL_TOMMY,
+                prompt_suffix=r"""
+PROFILE TYPE: PULL TOMMY HILFIGER / TOUS STYLES DE MAILLE
+
+The item is a knit sweater (pull, gilet, cardigan) from Tommy Hilfiger (ou assimilé), couvrant toutes les coupes et styles (preppy, casual, torsadé, jacquard, colorblock, marinière, etc.).
 
 FOCUS ON:
 
@@ -34,77 +38,77 @@ FOCUS ON:
      - col rond (crew neck),
      - col V (v-neck),
      - col zippé / col montant zippé,
-     - col roulé.
-   - Set "neckline" accordingly when obvious.
-   - Mention it in the French description:
-     - "col rond", "col V", "col zippé", "col montant", etc.
+     - col roulé,
+     - cardigan / gilet boutonné ou zippé.
+   - Set "neckline" accordingly when obvious and mention it in the French description.
 
-3) PATTERN & COLORS:
-   - Identify the pattern:
-     - uni, rayé, colorblock, à motifs, etc.
-   - For stripes / colorblock:
-     - Describe visible color combinations:
-       "rayures bleu marine, rouge et gris", "colorblock bleu/rouge/blanc", etc.
-   - Set "pattern" with a short value:
-     - e.g. "rayé", "uni", "colorblock".
+3) PATTERN & COLORS (TOUJOURS DANS TITRE + DESCRIPTION):
+   - Identify the pattern: uni, rayé, marinière, colorblock, jacquard, torsadé, à motifs géométriques, etc.
+   - Describe visible color combinations for rayures/colorblock: "rayures bleu marine et rouge", "colorblock bleu/rouge/blanc", etc.
+   - Set "pattern" with a short value: "rayé", "uni", "colorblock", "torsadé", etc.
 
 4) STYLE:
-   - Preppy / casual / smart casual.
-   - Use "style" to capture:
-     - "preppy", "casual chic", "college", etc., only if it fits the visual.
+   - Capture the perceived style: preppy, casual, smart casual, college, minimal, etc. only if it fits the visual.
 
-5) MATERIAL / COMPOSITION:
-   - Read composition from any label if it is clearly legible:
-     - coton, laine, merino, cachemire, acrylique, mélanges, etc.
-   - Mention composition in the French description.
-   - Do NOT invent composition if the label is not readable.
+5) MATERIAL / COMPOSITION (LOGIQUE TITRE & DESCRIPTION):
+   - Read composition from any label if clearly legible; do NOT invent if unreadable.
+   - Rules for the title when composition is lisible:
+     - If coton > 60%: mention the percentage in the title (ex: "65% coton").
+     - If coton ≤ 60%: mention "coton" sans pourcentage.
+     - If the composition includes laine, cachemire, lin ou satin: remplacer la mention de coton par la matière concernée dans le titre (sans pourcentage).
+     - If a label says "Pima Coton" or "100% pima coton": the title MUST include "premium".
+   - In description:
+     - Mention composition exacte lue sur l'étiquette quand visible.
+     - If pima coton: mentionner "Premium" et "100% pima coton" explicitement.
 
 6) SEASON:
-   - Based on thickness and knit:
-     - "hiver", "mi-saison", or similar.
-   - Do not over-claim warmth; stay descriptive.
+   - Based on thickness/knit: "hiver", "mi-saison", or similar without over-claiming warmth.
 
 7) CONDITION & DEFECTS:
-   - Look carefully for:
-     - pilling / boulochage,
-     - loose threads,
-     - pulls or snags,
-     - stains or discoloration,
-     - deformation at cuffs, hem, or neckline.
-   - "defects":
-     - Short French summary, e.g.:
-       - "Léger boulochage sur les manches"
-       - "Petite tache claire près du logo"
-     - If really nothing visible: either null or
-       "Aucun défaut majeur visible".
+   - Look carefully for pilling/boulochage, loose threads, snags, stains/discoloration, deformation at cuffs/hem/neckline.
+   - "defects": short French summary ("Léger boulochage sur les manches", etc.) or null / "Aucun défaut majeur visible" if clean.
 
-8) TITLE & DESCRIPTION (FRENCH):
+8) TAILLE ET MESURES À PLAT:
+   - If the size label is missing/unclear but flat measurements are provided, estimate the size (XS, S, M, L, XL, XXL, ...).
+   - In the description, immediately after the size mention: add "Taille estimée à la main à partir des mesures à plat (voir photos)." when the size is deduced.
+
+9) ÉTIQUETTES MANQUANTES:
+   - If size label missing only: mention "Etiquette de taille coupée pour plus de confort" in the description.
+   - If composition label missing only: mention "Etiquette de composition coupée pour plus de confort".
+   - If both missing: mention "Etiquette taille et composition coupées pour plus de confort".
+
+10) TITLE & DESCRIPTION (FRENCH):
    - title:
      - concise, clear, French.
-     - Should ideally include brand + garment type + key style or color.
-     - examples:
-       - "Pull Tommy Hilfiger rayé bleu marine et rouge"
-       - "Pull col V Tommy Jeans bleu marine"
-   - description:
-     - French, detailed, without markdown.
-     - Mention:
-       - type de pull (maille fine/épaisse),
-       - type de col,
-       - motif et couleurs,
-       - marque (si connue),
-       - éventuelle composition (si lisible),
-       - état général et défauts.
+     - Must include brand (if visible), garment type (pull/gilet/cardigan), motif/pattern, and the composition rule above.
+   - description (no markdown):
+     - type de maille/coupe + col,
+     - motif et couleurs (toujours rappeler le motif),
+     - marque si connue,
+     - composition lisible + mentions Premium/pima coton si applicable,
+     - saison d'usage,
+     - état/défauts,
+     - note sur taille estimée si applicable,
+     - mention sur étiquettes coupées si applicable,
+     - hashtags pertinents en fin de description pour la recherche (ex: #tommyhilfiger #pulltommy #preloved ...).
 
 JSON SCHEMA:
 - Use the SAME JSON keys as defined in the main prompt contract:
   "title", "description", "brand", "style", "pattern", "neckline", "season", "defects".
 - Do NOT add extra keys, and do NOT change key names.
 """,
-        json_schema=BASE_LISTING_SCHEMA,
-    ),
-}
+                json_schema=BASE_LISTING_SCHEMA,
+            ),
+        }
 
-logger.debug(
-    "Profil PULL_TOMMY chargé avec schéma %s",
-    list(BASE_LISTING_SCHEMA["properties"].keys()),
-)
+        logger.debug(
+            "Profil PULL_TOMMY chargé avec schéma %s",
+            list(BASE_LISTING_SCHEMA["properties"].keys()),
+        )
+        return profiles
+    except Exception:
+        logger.exception("Erreur lors de la construction des profils PULL_TOMMY")
+        raise
+
+
+PULLS_PROFILES: Dict[AnalysisProfileName, AnalysisProfile] = _build_pull_profiles()
