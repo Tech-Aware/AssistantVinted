@@ -12,7 +12,7 @@ from config.settings import Settings
 from domain.ai_provider import AIListingProvider, AIProviderName
 from domain.json_utils import safe_json_parse
 from domain.models import VintedListing
-from domain.prompt import PROMPT_CONTRACT
+from domain.prompt import build_full_prompt
 from domain.templates import AnalysisProfile
 from domain.normalizer import normalize_and_postprocess
 
@@ -86,7 +86,8 @@ class GeminiListingClient(AIListingProvider):
         )
 
         try:
-            raw_text = self._call_api(paths, profile)
+            prompt_text = build_full_prompt(profile, ui_data)
+            raw_text = self._call_api(paths, profile, prompt_text)
             logger.debug("Gemini brut: %s", raw_text[:400])
 
             # JSON robuste (si jamais il y a des ```json ....```, safe_json_parse gère)
@@ -122,17 +123,15 @@ class GeminiListingClient(AIListingProvider):
         self,
         image_paths: List[Path],
         profile: AnalysisProfile,
+        prompt_text: str,
     ) -> List[Any]:
         """
         Construit une liste de "parts" pour google-generativeai :
 
-        - d'abord le texte (PROMPT_CONTRACT + prompt_suffix)
+        - d'abord le texte (contrat global + suffixe profil + directives UI)
         - ensuite toutes les images (SKU, vues, étiquettes, mesures) du même article
         """
-        # Texte : contrat global + profil spécialisé
-        full_prompt = PROMPT_CONTRACT + "\n\n" + profile.prompt_suffix
-
-        parts: List[Any] = [full_prompt]
+        parts: List[Any] = [prompt_text]
 
         for path in image_paths:
             if not path.exists():
@@ -162,6 +161,7 @@ class GeminiListingClient(AIListingProvider):
         self,
         image_paths: List[Path],
         profile: AnalysisProfile,
+        prompt_text: str,
     ) -> str:
         """
         Appelle l'API Gemini en mode "simple" :
@@ -172,7 +172,7 @@ class GeminiListingClient(AIListingProvider):
         On attend donc que response.text soit une chaîne JSON (éventuellement encadrée
         par des ```json ... ```).
         """
-        parts = self._build_parts(image_paths, profile)
+        parts = self._build_parts(image_paths, profile, prompt_text)
 
         logger.debug(
             "Appel API Gemini (model=%s, nb_images=%d)...",

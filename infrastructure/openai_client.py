@@ -13,7 +13,7 @@ from config.settings import Settings
 from domain.ai_provider import AIListingProvider, AIProviderName
 from domain.models import VintedListing
 from domain.templates import AnalysisProfile
-from domain.prompt import PROMPT_CONTRACT
+from domain.prompt import build_full_prompt
 from domain.json_utils import safe_json_parse
 from domain.normalizer import normalize_and_postprocess
 
@@ -86,7 +86,8 @@ class OpenAIListingClient(AIListingProvider):
             images_b64 = [self._encode_image(p) for p in image_paths]
 
             # 2) Construction du payload (prompt contractuel + profil + multi-images)
-            payload = self._build_payload(images_b64, profile)
+            prompt_text = build_full_prompt(profile, ui_data)
+            payload = self._build_payload(images_b64, profile, prompt_text)
 
             # 3) Appel API OpenAI
             response_json = self._call_api(payload)
@@ -148,17 +149,15 @@ class OpenAIListingClient(AIListingProvider):
         self,
         images_b64: List[str],
         profile: AnalysisProfile,
+        prompt_text: str,
     ) -> Dict[str, Any]:
         """
         Construit le payload JSON pour /v1/chat/completions avec :
-        - message système : contrat + suffixe de profil
+        - message système : contrat + suffixe de profil + directives UI
         - message user : consignes + toutes les images
         - response_format json_object (OpenAI formate la sortie en JSON)
         """
         try:
-            # Prompt système = contrat général + instructions spécifiques au profil
-            full_prompt = PROMPT_CONTRACT + "\n\n" + profile.prompt_suffix
-
             # Contenu utilisateur : texte + toutes les images
             user_content: List[Dict[str, Any]] = [
                 {
@@ -194,7 +193,7 @@ class OpenAIListingClient(AIListingProvider):
                         "content": [
                             {
                                 "type": "text",
-                                "text": full_prompt,
+                                "text": prompt_text,
                             }
                         ],
                     },

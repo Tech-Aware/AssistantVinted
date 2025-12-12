@@ -12,6 +12,9 @@ Ce fichier définit un seul contrat fort, réutilisé par tous les clients :
 
 from __future__ import annotations
 
+import logging
+from typing import Any, Dict
+
 
 PROMPT_CONTRACT = r"""
 You are a structured data extraction agent specializing in second-hand clothing listings for Vinted.
@@ -208,3 +211,57 @@ JSON ONLY:
 - Your final answer MUST be ONLY the JSON object.
 - No surrounding text, no explanations, no markdown.
 """
+
+
+logger = logging.getLogger(__name__)
+
+
+def build_full_prompt(profile: Any, ui_data: Dict[str, Any] | None = None) -> str:
+    """Construit le prompt complet en intégrant les préférences UI.
+
+    Les profils qui gèrent un mode de relevé (polaire, pull) reçoivent des
+    instructions supplémentaires selon la sélection "étiquette visible" ou
+    "analyser les mesures" pour éviter les déductions automatiques non souhaitées.
+    """
+
+    try:
+        ui_data = ui_data or {}
+        base_prompt = f"{PROMPT_CONTRACT}\n\n{profile.prompt_suffix}"
+
+        measurement_mode = ui_data.get("measurement_mode")
+        measurement_profiles = {"polaire_outdoor", "pull_tommy"}
+
+        extra_instructions: list[str] = []
+        if profile.name.value in measurement_profiles and measurement_mode:
+            if measurement_mode == "etiquette":
+                extra_instructions.append(
+                    "MODE UI = ÉTIQUETTES LISIBLES : baser la taille uniquement sur"
+                    " les étiquettes visibles. Ne pas déduire la taille depuis les"
+                    " mesures à plat même si elles apparaissent sur les photos."
+                )
+            elif measurement_mode == "mesures":
+                extra_instructions.append(
+                    "MODE UI = ANALYSER LES MESURES : considérer que l'étiquette de"
+                    " taille est illisible/manquante. Utiliser les mesures à plat"
+                    " visibles pour estimer la taille et ajouter la mention"
+                    " \"Taille estimée à la main à partir des mesures à plat (voir"
+                    " photos).\" juste après la taille dans la description."
+                )
+
+        if extra_instructions:
+            base_prompt = base_prompt + "\n\n" + "\n".join(extra_instructions)
+            logger.debug(
+                "Instructions UI appliquées au prompt (%s) avec mode %s",
+                profile.name.value,
+                measurement_mode,
+            )
+
+        return base_prompt
+    except Exception as exc:
+        logger.error(
+            "Erreur lors de la construction du prompt complet pour %s: %s",
+            getattr(profile, "name", "inconnu"),
+            exc,
+            exc_info=True,
+        )
+        return f"{PROMPT_CONTRACT}\n\n{getattr(profile, 'prompt_suffix', '')}"

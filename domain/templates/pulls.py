@@ -69,7 +69,9 @@ FOCUS ON:
    - "defects": short French summary ("Léger boulochage sur les manches", etc.) or null / "Aucun défaut majeur visible" if clean.
 
 8) TAILLE ET MESURES À PLAT:
-   - If the size label is missing/unclear but flat measurements are provided, estimate the size (XS, S, M, L, XL, XXL, ...).
+   - Respect the UI measurement mode:
+     - If the UI says "étiquettes lisibles" (measurement_mode=etiquette): do NOT estimate size from measurements; rely only on labels.
+     - If the UI says "analyser les mesures" (measurement_mode=mesures): consider the size label missing and estimate the size (XS, S, M, L, XL, XXL, ...) from flat measurements.
    - In the description, immediately after the size mention: add "Taille estimée à la main à partir des mesures à plat (voir photos)." when the size is deduced.
 
 9) ÉTIQUETTES MANQUANTES:
