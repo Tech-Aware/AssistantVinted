@@ -123,6 +123,48 @@ def _extract_fit_from_text(text: str) -> Optional[str]:
     return None
 
 
+def _cleanup_pull_tommy_description(description: Optional[str]) -> str:
+    """Supprime les lignes SKU et assure une ligne vide avant les hashtags.
+
+    Cette étape ajoute un filet de sécurité post-génération pour les pulls Tommy
+    afin d'éviter qu'une ligne « SKU : » n'apparaisse en pied de description,
+    même si le LLM la renvoie.
+    """
+
+    try:
+        if not description:
+            return description or ""
+
+        lines = description.split("\n")
+        filtered: list[str] = []
+
+        for line in lines:
+            stripped = line.strip().lower()
+            if stripped.startswith("sku"):
+                logger.debug(
+                    "_cleanup_pull_tommy_description: suppression ligne SKU: %s", line
+                )
+                continue
+            filtered.append(line)
+
+        with_spacing: list[str] = []
+        for line in filtered:
+            if line.strip().startswith("#") and (not with_spacing or with_spacing[-1].strip()):
+                with_spacing.append("")
+            with_spacing.append(line)
+
+        cleaned = "\n".join(with_spacing).strip()
+        logger.debug(
+            "_cleanup_pull_tommy_description: description nettoyée = %s", cleaned
+        )
+        return cleaned
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception(
+            "_cleanup_pull_tommy_description: erreur inattendue (%s)", exc
+        )
+        return description or ""
+
+
 def _normalize_fit_label(raw_fit: Optional[str]) -> Optional[str]:
     """
     Uniformise les libellés de coupe.
@@ -379,6 +421,8 @@ def normalize_and_postprocess(
                 ai_description=ai_data.get("description"),
                 ai_defects=ai_data.get("defects"),
             )
+        elif profile_name == AnalysisProfileName.PULL_TOMMY:
+            description = _cleanup_pull_tommy_description(ai_data.get("description"))
         else:
             description = ai_data.get("description")
     except Exception as exc:  # pragma: no cover - defensive
