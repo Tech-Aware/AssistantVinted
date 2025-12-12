@@ -245,13 +245,16 @@ def build_full_prompt(profile: Any, ui_data: Dict[str, Any] | None = None) -> st
 
             if profile.name.value == "pull_tommy":
                 extra_instructions.append(
-                    "DESCRIPTION PULL_TOMMY : respecter le format en 8 lignes inspiré"
-                    " du profil jean Levi's, avec des lignes courtes séparées par des"
-                    " retours à la ligne (aucun markdown). Ordre impératif : (1) type"
-                    " + genre + taille, (2) motif/couleurs/col, (3) composition avec"
-                    " mention Premium/pima coton si vu, (4) saison, (5) état/défauts,"
-                    " (6) étiquettes coupées le cas échéant, (7) phrase mesures en photo"
-                    " sans chiffres, (8) ligne hashtags."
+                    "DESCRIPTION PULL_TOMMY : respecter le format en 14 lignes avec"
+                    " LIGNES VIDES obligatoires pour séparer les blocs (inspiré du profil"
+                    " jean Levi's). Ordre impératif : (1) type + genre + taille, (2)"
+                    " motif/couleurs/col, (3) LIGNE VIDE, (4) composition avec mention"
+                    " Premium/pima coton si vu, (5) saison, (6) LIGNE VIDE, (7) état/défauts,"
+                    " (8) étiquettes coupées si applicable, (9) phrase mesures en photo"
+                    " sans chiffres, (10) \"📦 Envoi rapide et soigné\", (11) LIGNE VIDE,"
+                    " (12) call-to-action vers la collection, (13) conseil lot/réduction,"
+                    " (14) ligne hashtags. Aucun SKU et aucune valeur de mesure chiffrée"
+                    " dans la description."
                 )
 
             if measurement_mode == "etiquette":
