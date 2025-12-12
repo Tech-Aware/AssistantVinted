@@ -239,6 +239,9 @@ def _strip_footer_lines(description: str) -> str:
             if lowered.startswith("couleur :"):
                 logger.debug("_strip_footer_lines: ligne couleur supprimée: %s", line)
                 continue
+            if lowered.startswith("sku"):
+                logger.debug("_strip_footer_lines: ligne SKU supprimée: %s", line)
+                continue
             filtered_lines.append(line)
 
         cleaned = "\n".join(filtered_lines)
