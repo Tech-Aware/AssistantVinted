@@ -84,16 +84,16 @@ FOCUS ON:
      - Inclure systématiquement: marque si lisible + type (pull/gilet/cardigan) + genre (femme/homme/unisexe) + taille (étiquette ou estimée) + motif/pattern + matière principale selon les règles ci-dessus + type de col si clair + suffixe SKU (ex: "- PTF118").
      - Exemples: "Pull Tommy Hilfiger femme taille M 100% coton rouge torsadé col V - PTF118", "Gilet Tommy Hilfiger homme taille L laine bleu rayé col châle - PTF42".
    - description (pas de markdown, pas de valeurs chiffrées de mesures):
-     - Structure obligatoire, chaque puce doit apparaître sur sa propre ligne (séparée par des retours à la ligne, pas de markdown ni de bloc unique) :
-       1) type de maille + genre + taille (ajouter la mention d'estimation si mode mesures),
-       2) motif + couleurs + type de col,
-       3) composition lisible + mention Premium/pima coton si applicable,
-       4) saison d'usage,
-       5) état/défauts (rappeler le motif si cohérent),
-       6) mention sur étiquettes coupées si applicable,
-       7) phrase "📏 Mesures détaillées visibles en photo pour plus de précisions." sans aucune valeur chiffrée,
-       8) ligne hashtags de recherche en fin de texte.
-     - Interdiction formelle d'ajouter une ligne "SKU" ou un numéro interne dans la description (les SKU ne doivent apparaître que dans le suffixe du titre).
+     - Copie la mise en forme stricte utilisée sur les jeans Levi's : chaque ligne séparée par un simple retour à la ligne (pas de puces markdown) et le corps organisé en blocs courts. Respecte EXACTEMENT l'ordre suivant, sans ajouter d'autres phrases entre ces lignes :
+       1) "Pull/Gilet Tommy Hilfiger pour <Genre> taille <Taille>." (ajouter la mention d'estimation si mode mesures),
+       2) ligne motif + couleurs + type de col (ex: "Maille torsadée rouge avec col V."),
+       3) ligne composition lisible + mention Premium/pima coton si applicable (ex: "Composition : 100% coton.", "Composition : mélange avec laine.", "Premium 100% pima coton."),
+       4) ligne saison d'usage (ex: "Idéal mi-saison" ou "Pour l'hiver"),
+       5) ligne état/défauts (ex: "Très bon état" ou "Léger boulochage sur manches"),
+       6) ligne mention étiquettes coupées si applicable ("Etiquette de taille coupée pour plus de confort", etc.),
+       7) ligne "📏 Mesures détaillées visibles en photo pour plus de précisions." sans aucune valeur chiffrée,
+       8) ligne hashtags de recherche en fin de texte, sans ligne SKU.
+     - Interdiction formelle d'ajouter une ligne "SKU" ou un numéro interne dans la description (les SKU ne doivent apparaître que dans le suffixe du titre). Ne jamais insérer de valeurs de mesures chiffrées dans la description, même si elles sont visibles sur les photos.
 
 JSON SCHEMA:
 - Use the SAME JSON keys as defined in the main prompt contract:

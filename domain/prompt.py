@@ -234,7 +234,7 @@ def build_full_prompt(profile: Any, ui_data: Dict[str, Any] | None = None) -> st
         extra_instructions: list[str] = []
         if profile.name.value in measurement_profiles:
             extra_instructions.append(
-                "NE JAMAIS lister de valeurs chiffrées de mesures dans la description," 
+                "NE JAMAIS lister de valeurs chiffrées de mesures dans la description,"
                 " même si les photos montrent un mètre ruban. Se limiter à la phrase"
                 " sur les mesures en photo."
             )
@@ -242,6 +242,17 @@ def build_full_prompt(profile: Any, ui_data: Dict[str, Any] | None = None) -> st
                 "NE JAMAIS ajouter de ligne SKU ou numéro interne dans la description"
                 " (SKU uniquement dans le titre)."
             )
+
+            if profile.name.value == "pull_tommy":
+                extra_instructions.append(
+                    "DESCRIPTION PULL_TOMMY : respecter le format en 8 lignes inspiré"
+                    " du profil jean Levi's, avec des lignes courtes séparées par des"
+                    " retours à la ligne (aucun markdown). Ordre impératif : (1) type"
+                    " + genre + taille, (2) motif/couleurs/col, (3) composition avec"
+                    " mention Premium/pima coton si vu, (4) saison, (5) état/défauts,"
+                    " (6) étiquettes coupées le cas échéant, (7) phrase mesures en photo"
+                    " sans chiffres, (8) ligne hashtags."
+                )
 
             if measurement_mode == "etiquette":
                 extra_instructions.append(
