@@ -140,10 +140,26 @@ def _build_hashtags(
                 add(f"#levis{model_number}")
                 add(f"#{model_number}")
 
+            model_tokens: List[str] = []
             for token in model_low.replace("/", " ").split():
                 token_clean = token.replace("'", "").replace("-", "")
                 if token_clean == model_number or token_clean.isdigit():
                     continue
+                if token_clean:
+                    model_tokens.append(token_clean)
+
+            try:
+                tokens_lower = {t.lower() for t in model_tokens}
+                if "super" in tokens_lower and "skinny" in tokens_lower:
+                    add("#superskinny")
+                    model_tokens = [t for t in model_tokens if t.lower() not in {"super", "skinny"}]
+                if "super" in tokens_lower and "slim" in tokens_lower:
+                    add("#superslim")
+                    model_tokens = [t for t in model_tokens if t.lower() not in {"super", "slim"}]
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.debug("_build_hashtags: combinaison tokens modèle impossible (%s)", exc)
+
+            for token_clean in model_tokens:
                 add(f"#{token_clean}")
 
         if fit:

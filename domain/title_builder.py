@@ -135,6 +135,22 @@ def _classify_rise_from_cm(rise_cm: Optional[float]) -> Optional[str]:
     return "high"
 
 
+def _is_low_rise_label(raw: Optional[str]) -> bool:
+    """
+    Détermine si un libellé de taille correspond à de la taille basse.
+
+    On accepte différents formats ("low", "taille basse", "ultra_low"...).
+    """
+    try:
+        if not raw:
+            return False
+        normalized = str(raw).strip().lower()
+        return "low" in normalized or "basse" in normalized or "ultra" in normalized
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("_is_low_rise_label: impossible de déterminer la taille basse (%s)", exc)
+        return False
+
+
 def build_jean_levis_title(features: Dict[str, Any]) -> str:
     """
     Construit un titre de jean Levi's en appliquant les règles métier :
@@ -210,6 +226,14 @@ def build_jean_levis_title(features: Dict[str, Any]) -> str:
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning("build_jean_levis_title: rise_type illisible (%s)", exc)
 
+    low_rise = _is_low_rise_label(rise_type)
+    if not low_rise:
+        try:
+            rise_cm_value = features.get("rise_cm")
+            low_rise = _is_low_rise_label(_classify_rise_from_cm(rise_cm_value))
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.debug("build_jean_levis_title: détection taille basse impossible (%s)", exc)
+
     # Normalisation d'affichage de la taille US :
     # - si déjà au format "W28", on garde tel quel
     # - sinon, on préfixe avec "W"
@@ -243,7 +267,6 @@ def build_jean_levis_title(features: Dict[str, Any]) -> str:
         parts.append(size_us_display)
 
     # Coupe + éventuelle 'taille basse'
-    low_rise = rise_type in ("low", "ultra_low")
     if fit and low_rise:
         parts.append(f"coupe {fit} taille basse")
     elif fit:
