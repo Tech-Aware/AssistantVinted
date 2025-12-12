@@ -84,7 +84,7 @@ def _build_composition(cotton_percent: Optional[Any], elasthane_percent: Optiona
 
 def _build_state_sentence(defects: Optional[str]) -> str:
     try:
-        clean_defects = _safe_clean(defects)
+        clean_defects = _normalize_defects(defects)
         if not clean_defects:
             return "Très bon état général."
         return f"Bon état général, légères traces d'usage : {clean_defects} (voir photos)."
@@ -150,6 +150,25 @@ def _build_hashtags(
         return ""
 
 
+def _normalize_defects(defects: Optional[str]) -> str:
+    try:
+        base = _safe_clean(defects)
+        if not base:
+            return ""
+
+        lowered = base.lower()
+        if "voir photos" in lowered:
+            cut = lowered.split("voir photos", 1)[0].strip()
+        else:
+            cut = base.strip()
+
+        cleaned = cut.rstrip(". ,;")
+        return cleaned
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("_normalize_defects: erreur %s", exc)
+        return ""
+
+
 # ---------------------------------------------------------------------------
 # Génération de description pour jean Levi's
 # ---------------------------------------------------------------------------
@@ -206,11 +225,14 @@ def build_jean_levis_description(
         size_sentence = ", ".join(size_sentence_parts).strip()
         size_sentence = f"{size_sentence}." if size_sentence else "Taille non précisée."
 
-        color_sentence = (
-            f"Coloris {color} légèrement délavé, très polyvalent et facile à assortir."
-            if color
-            else "Coloris non précisé, se référer aux photos pour les nuances."
-        )
+        color_has_fade = "lavé" in color.lower() if color else False
+        if color:
+            nuance = " légèrement délavé" if not color_has_fade else ""
+            color_sentence = (
+                f"Coloris {color}{nuance}, très polyvalent et facile à assortir."
+            )
+        else:
+            color_sentence = "Coloris non précisé, se référer aux photos pour les nuances."
         composition_sentence = _build_composition(
             features.get("cotton_percent"), features.get("elasthane_percent")
         )
@@ -240,13 +262,6 @@ def build_jean_levis_description(
             rise_label=rise_label,
         )
 
-        footer_parts: List[str] = []
-        if brand:
-            footer_parts.append(f"Marque : {brand}")
-        if color:
-            footer_parts.append(f"Couleur : {color}")
-        footer = "\n".join(footer_parts)
-
         paragraphs = [
             intro_sentence,
             size_sentence,
@@ -259,7 +274,6 @@ def build_jean_levis_description(
             cta_durin_sentence,
             cta_lot_sentence,
             hashtags,
-            footer,
         ]
 
         description = "\n\n".join(part for part in paragraphs if part)
