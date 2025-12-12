@@ -101,6 +101,8 @@ def _build_hashtags(
     size_fr: str,
     size_us: str,
     length: str,
+    gender: str,
+    rise_label: str,
 ) -> str:
     try:
         tokens: List[str] = []
@@ -114,16 +116,26 @@ def _build_hashtags(
         add("#jeanlevis")
         add("#jeandenim")
 
+        if gender:
+            gender_token = gender.lower().replace(" ", "")
+            add(f"#levis{gender_token}")
+
         if model:
             add(f"#levis{model}")
 
         if fit:
-            fit_clean = fit.lower().replace(" ", "")
+            fit_clean = (
+                fit.lower().replace(" ", "").replace("/", "").replace("é", "e")
+            )
             add(f"#{fit_clean}jean")
 
         if color:
             color_clean = color.lower().replace(" ", "")
             add(f"#jean{color_clean}")
+
+        rise_clean = rise_label.lower().replace(" ", "") if rise_label else ""
+        if rise_clean:
+            add(f"#{rise_clean}")
 
         if size_fr:
             add(f"#fr{size_fr.lower()}")
@@ -171,34 +183,50 @@ def build_jean_levis_description(
             title_intro_parts.append(model)
         title_intro = " ".join(title_intro_parts)
 
-        size_sentence_parts = []
-        if size_fr:
-            size_sentence_parts.append(f"Taille FR {size_fr}")
-        if size_us:
-            size_sentence_parts.append(f"US {size_us}")
-        if length:
-            size_sentence_parts.append(length)
-        size_sentence = " / ".join(size_sentence_parts) if size_sentence_parts else "Taille non précisée"
+        # --- Phrases structurées ------------------------------------------
+        intro_sentence = f"{title_intro} pour {gender}."
 
-        intro = f"{title_intro} pour {gender}, {rise_label}, {fit}."
-        intro_size = f"{size_sentence}."
+        size_sentence_parts = []
+        if size_us and size_fr:
+            size_sentence_parts.append(
+                f"Taille {size_us} US (équivalent {size_fr} FR)"
+            )
+        elif size_fr:
+            size_sentence_parts.append(f"Taille {size_fr} FR")
+        elif size_us:
+            size_sentence_parts.append(f"Taille {size_us} US")
+        if fit:
+            size_sentence_parts.append(f"coupe {fit}")
+        if rise_label:
+            size_sentence_parts.append(f"à {rise_label}")
+        if size_sentence_parts:
+            size_sentence_parts.append(
+                "pour une silhouette ajustée et confortable"
+            )
+        size_sentence = ", ".join(size_sentence_parts).strip()
+        size_sentence = f"{size_sentence}." if size_sentence else "Taille non précisée."
+
         color_sentence = (
-            f"Coloris {color} facile à associer." if color else "Coloris non précisé, voir photos."
+            f"Coloris {color} légèrement délavé, très polyvalent et facile à assortir."
+            if color
+            else "Coloris non précisé, se référer aux photos pour les nuances."
         )
         composition_sentence = _build_composition(
             features.get("cotton_percent"), features.get("elasthane_percent")
         )
+        closure_sentence = "Fermeture zippée + bouton gravé Levi’s."
         state_sentence = _build_state_sentence(ai_defects or features.get("defects"))
 
-        logistics_sentence = "📏 Mesures visibles en photo. 📦 Envoi rapide et soigné."
+        logistics_sentence = "📏 Mesures visibles en photo."
+        shipping_sentence = "📦 Envoi rapide et soigné"
 
-        cta_parts = []
-        if sku:
-            cta_parts.append(f"SKU: {sku}")
-        cta_parts.append(
-            "💡 Pensez à un lot pour réduire les frais d'envoi et profiter d'une remise."
+        cta_lot_sentence = (
+            "💡 Pensez à un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !"
         )
-        cta = " ".join(cta_parts)
+        durin_tag = f"#durin31fr{(size_fr or 'nc').lower()}"
+        cta_durin_sentence = (
+            f"✨ Retrouvez tous mes articles Levi’s à votre taille ici 👉 {durin_tag}"
+        )
 
         hashtags = _build_hashtags(
             brand=brand,
@@ -208,9 +236,11 @@ def build_jean_levis_description(
             size_fr=size_fr,
             size_us=size_us,
             length=length,
+            gender=gender,
+            rise_label=rise_label,
         )
 
-        footer_parts = []
+        footer_parts: List[str] = []
         if brand:
             footer_parts.append(f"Marque : {brand}")
         if color:
@@ -218,13 +248,16 @@ def build_jean_levis_description(
         footer = "\n".join(footer_parts)
 
         paragraphs = [
-            intro,
-            intro_size,
+            intro_sentence,
+            size_sentence,
             color_sentence,
             composition_sentence,
+            closure_sentence,
             state_sentence,
             logistics_sentence,
-            cta,
+            shipping_sentence,
+            cta_durin_sentence,
+            cta_lot_sentence,
             hashtags,
             footer,
         ]
