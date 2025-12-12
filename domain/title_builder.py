@@ -112,12 +112,19 @@ def _sanitize_model_label(value: Optional[str]) -> Optional[str]:
 def _normalize_gender(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
-    v = value.strip().lower()
-    if v.startswith("f"):
-        return "femme"
-    if v.startswith("h"):
-        return "homme"
-    return value.strip()
+    try:
+        v = value.strip().lower()
+        female_markers = {"f", "femme", "female", "woman", "women", "girl"}
+        male_markers = {"h", "homme", "male", "man", "men", "boy"}
+
+        if v in female_markers or v.startswith("fem") or v.startswith("wom"):
+            return "femme"
+        if v in male_markers or v.startswith("hom") or v.startswith("masc") or v.startswith("men"):
+            return "homme"
+        return value.strip()
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("_normalize_gender: impossible de normaliser (%s)", exc)
+        return value.strip()
 
 
 def _safe_join(parts: List[str]) -> str:
@@ -169,16 +176,21 @@ def _format_colors_segment(value: Optional[Any]) -> Optional[str]:
         unique: List[str] = []
         seen = set()
         for color in colors:
-            color_key = color.strip().lower()
+            color_clean = color.strip()
+            color_key = color_clean.lower()
             if not color_key or color_key in seen:
                 continue
             seen.add(color_key)
-            unique.append(color_key)
+            unique.append(color_clean.lower())
 
         if not unique:
             return None
 
-        max_colors = 3
+        # Si "multicolore" est présent avec d'autres couleurs, on le supprime.
+        if len(unique) > 1:
+            unique = [c for c in unique if c != "multicolore"] or unique
+
+        max_colors = 2
         limited = unique[:max_colors]
         return ", ".join(limited)
     except Exception as exc:  # pragma: no cover - defensive
@@ -219,8 +231,7 @@ def _format_material_segment(
 
         # --- Matières prioritaires (laine / cachemire / lin / satin) -----
         if wool_value is not None and wool_value > 0:
-            wool_segment = f"{wool_value}% laine" if wool_value >= 1 else "laine"
-            return wool_segment.lower()
+            return "laine"
 
         for keyword, label in priority_mapping.items():
             if keyword in material_label:
