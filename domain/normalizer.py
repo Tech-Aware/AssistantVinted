@@ -373,6 +373,16 @@ def build_features_for_pull_tommy(
         )
         sku_source = "ui" if sku_from_ui is not None else "ai"
 
+        def _is_label_sku(value: str) -> bool:
+            try:
+                return bool(re.match(r"^[a-zA-Z]+[0-9]+$", value.strip()))
+            except Exception:
+                logger.debug(
+                    "build_features_for_pull_tommy: validation SKU impossible pour '%s'",
+                    value,
+                )
+                return False
+
         if sku_source == "ui":
             sku = sku_from_ui
             if not sku_status or sku_status.lower() != "ok":
@@ -382,14 +392,21 @@ def build_features_for_pull_tommy(
                 sku,
             )
         else:
-            sku = None
-            if sku_from_ai:
+            if sku_from_ai and sku_status == "ok" and _is_label_sku(sku_from_ai):
+                sku = sku_from_ai
                 logger.info(
-                    "build_features_for_pull_tommy: SKU détecté par l'IA ignoré (source photo non fiable, statut=%s, valeur=%s)",
-                    sku_status,
-                    sku_from_ai,
+                    "build_features_for_pull_tommy: SKU détecté sur étiquette photo accepté (%s)",
+                    sku,
                 )
-            sku_status = "missing"
+            else:
+                if sku_from_ai:
+                    logger.info(
+                        "build_features_for_pull_tommy: SKU IA rejeté (statut=%s, valeur=%s)",
+                        sku_status,
+                        sku_from_ai,
+                    )
+                sku = None
+                sku_status = "missing"
 
         features: Dict[str, Any] = {
             "brand": brand,
