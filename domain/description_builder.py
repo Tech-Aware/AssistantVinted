@@ -251,6 +251,32 @@ def _strip_footer_lines(description: str) -> str:
         return description
 
 
+def _build_pull_tommy_composition(
+    material: Optional[str], cotton_percent: Optional[Any], wool_percent: Optional[Any]
+) -> str:
+    try:
+        cotton_val = _format_percent(cotton_percent)
+        wool_val = _format_percent(wool_percent)
+
+        fibers: List[str] = []
+        if cotton_val is not None:
+            fibers.append(f"{cotton_val}% coton")
+        if wool_val is not None:
+            fibers.append(f"{wool_val}% laine")
+
+        if fibers:
+            return "Composition : " + " et ".join(fibers) + "."
+
+        clean_material = _safe_clean(material)
+        if clean_material:
+            return f"Composition (étiquette) : {clean_material}."
+
+        return "Composition non lisible (voir photos)."
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("_build_pull_tommy_composition: erreur %s", exc)
+        return "Composition non lisible (voir photos)."
+
+
 def _normalize_fit_display(raw_fit: Optional[str], model_hint: Optional[str] = None) -> str:
     try:
         if not raw_fit and not model_hint:
@@ -401,4 +427,109 @@ def build_jean_levis_description(
 
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("build_jean_levis_description: fallback description IA (%s)", exc)
+        return _safe_clean(ai_description)
+
+
+def build_pull_tommy_description(
+    features: Dict[str, Any],
+    ai_description: Optional[str] = None,
+    ai_defects: Optional[str] = None,
+) -> str:
+    """Construit une description structurée pour un pull Tommy Hilfiger."""
+    try:
+        logger.info("build_pull_tommy_description: features reçus = %s", features)
+
+        brand = _safe_clean(features.get("brand")) or "Tommy Hilfiger"
+        garment_type = _safe_clean(features.get("garment_type")) or "pull"
+        gender = _safe_clean(features.get("gender")) or "femme"
+        neckline = _safe_clean(features.get("neckline"))
+        pattern = _safe_clean(features.get("pattern"))
+        material = _safe_clean(features.get("material"))
+        cotton_percent = features.get("cotton_percent")
+        wool_percent = features.get("wool_percent")
+        colors_raw = features.get("main_colors")
+        size = _safe_clean(features.get("size"))
+        size_source = (_safe_clean(features.get("size_source")) or "").lower()
+        measurement_mode = (_safe_clean(features.get("measurement_mode")) or "").lower()
+        defects = ai_defects or features.get("defects")
+
+        colors = ""
+        try:
+            if isinstance(colors_raw, list):
+                colors = ", ".join([_safe_clean(c) for c in colors_raw if _safe_clean(c)])
+            else:
+                colors = _safe_clean(colors_raw)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("build_pull_tommy_description: couleurs non exploitables (%s)", exc)
+            colors = ""
+
+        intro_parts: List[str] = []
+        intro_parts.append(f"{garment_type.capitalize()} {brand}")
+        if gender:
+            intro_parts.append(f"pour {gender}")
+        intro_sentence = " ".join(intro_parts).strip() + "."
+
+        if size:
+            if size_source == "estimated" or measurement_mode == "mesures":
+                size_sentence = (
+                    f"Taille estimée {size}. Estimée à la main à partir des mesures à plat."
+                )
+            else:
+                size_sentence = f"Taille indiquée sur étiquette : {size}."
+        else:
+            size_sentence = "Taille non précisée."
+
+        neckline_sentence = f"Col {neckline}." if neckline else ""
+        pattern_sentence = f"Motif : {pattern}." if pattern else ""
+        color_sentence = f"Coloris : {colors}." if colors else ""
+
+        composition_sentence = _build_pull_tommy_composition(
+            material=material,
+            cotton_percent=cotton_percent,
+            wool_percent=wool_percent,
+        )
+
+        state_sentence = _build_state_sentence(defects)
+        logistics_sentence = "Envoi rapide et soigné. Article conforme aux photos."
+
+        tokens_hashtag: List[str] = []
+        try:
+            def _add_tag(token: str) -> None:
+                if token and token not in tokens_hashtag:
+                    tokens_hashtag.append(token)
+
+            _add_tag("#tommyhilfiger")
+            if garment_type:
+                _add_tag(f"#{garment_type.replace(' ', '').lower()}")
+            if gender:
+                _add_tag(f"#{gender.lower()}")
+            if colors:
+                for color_token in colors.split(","):
+                    clean_color = color_token.strip().lower().replace(" ", "")
+                    if clean_color:
+                        _add_tag(f"#{clean_color}")
+            if size:
+                _add_tag(f"#taille{size.lower()}")
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("build_pull_tommy_description: hashtags réduits (%s)", exc)
+
+        paragraphs = [
+            intro_sentence,
+            size_sentence,
+            " ".join(token for token in [neckline_sentence, pattern_sentence, color_sentence] if token).strip(),
+            composition_sentence,
+            state_sentence,
+            logistics_sentence,
+        ]
+
+        hashtags = " ".join(tokens_hashtag)
+        if hashtags:
+            paragraphs.append(hashtags)
+
+        description = "\n".join([p for p in paragraphs if p])
+        cleaned = _strip_footer_lines(description)
+        logger.debug("build_pull_tommy_description: description générée = %s", cleaned)
+        return cleaned
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("build_pull_tommy_description: fallback description IA (%s)", exc)
         return _safe_clean(ai_description)

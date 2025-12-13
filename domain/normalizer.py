@@ -6,7 +6,10 @@ import re
 from typing import Dict, Any, Optional
 import logging
 
-from domain.description_builder import build_jean_levis_description
+from domain.description_builder import (
+    build_jean_levis_description,
+    build_pull_tommy_description,
+)
 from domain.templates import AnalysisProfileName
 from domain.title_builder import build_jean_levis_title, build_pull_tommy_title
 
@@ -355,6 +358,7 @@ def build_features_for_pull_tommy(
         ui_data = ui_data or {}
         raw_features = ai_data.get("features") or {}
 
+        measurement_mode = ui_data.get("measurement_mode") or "etiquette"
         brand = raw_features.get("brand") or ai_data.get("brand")
         garment_type = raw_features.get("garment_type") or ai_data.get("style")
         neckline = raw_features.get("neckline") or ai_data.get("neckline")
@@ -364,7 +368,59 @@ def build_features_for_pull_tommy(
         wool_percent = raw_features.get("wool_percent")
         main_colors = raw_features.get("main_colors") or raw_features.get("colors")
         gender = ui_data.get("gender") or raw_features.get("gender")
-        size = ui_data.get("size") or raw_features.get("size") or ai_data.get("size")
+
+        size_from_ui = ui_data.get("size")
+        size_label = raw_features.get("size") or ai_data.get("size")
+        size_estimated = raw_features.get("size_estimated")
+        size_source = raw_features.get("size_source")
+
+        size = None
+        computed_size_source = None
+
+        try:
+            if measurement_mode == "mesures":
+                if size_from_ui:
+                    size = size_from_ui
+                    computed_size_source = "estimated"
+                    logger.info(
+                        "build_features_for_pull_tommy: taille UI retenue en mode mesures (%s)",
+                        size,
+                    )
+                elif size_estimated:
+                    size = size_estimated
+                    computed_size_source = "estimated"
+                    logger.info(
+                        "build_features_for_pull_tommy: taille estimée depuis mesures IA (%s)",
+                        size,
+                    )
+                elif size_label:
+                    size = size_label
+                    computed_size_source = size_source or "estimated"
+                    logger.info(
+                        "build_features_for_pull_tommy: taille issue des données IA malgré mode mesures (%s)",
+                        size,
+                    )
+                else:
+                    size = None
+                    computed_size_source = None
+                    logger.warning(
+                        "build_features_for_pull_tommy: aucune taille estimable en mode mesures",
+                    )
+            else:
+                size = size_from_ui or size_label
+                computed_size_source = size_source or ("label" if size else None)
+                if size:
+                    logger.debug(
+                        "build_features_for_pull_tommy: taille retenue mode etiquette (%s)",
+                        size,
+                    )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception(
+                "build_features_for_pull_tommy: erreur détermination taille (mode=%s)",
+                measurement_mode,
+            )
+            size = size_from_ui or size_label or size_estimated
+            computed_size_source = computed_size_source or size_source
         sku_from_ui = ui_data.get("sku")
         sku_from_ai = raw_features.get("sku") or ai_data.get("sku")
         sku_status_raw = raw_features.get("sku_status") or ai_data.get("sku_status")
@@ -423,6 +479,9 @@ def build_features_for_pull_tommy(
             "main_colors": main_colors,
             "gender": gender,
             "size": size,
+            "size_estimated": size_estimated,
+            "size_source": computed_size_source,
+            "measurement_mode": measurement_mode,
             "sku": sku,
             "sku_status": sku_status,
         }
@@ -477,6 +536,12 @@ def normalize_and_postprocess(
     try:
         if profile_name == AnalysisProfileName.JEAN_LEVIS:
             description = build_jean_levis_description(
+                {**features, "defects": ai_data.get("defects")},
+                ai_description=ai_data.get("description"),
+                ai_defects=ai_data.get("defects"),
+            )
+        elif profile_name == AnalysisProfileName.PULL_TOMMY:
+            description = build_pull_tommy_description(
                 {**features, "defects": ai_data.get("defects")},
                 ai_description=ai_data.get("description"),
                 ai_defects=ai_data.get("defects"),

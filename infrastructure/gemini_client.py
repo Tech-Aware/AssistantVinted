@@ -86,7 +86,7 @@ class GeminiListingClient(AIListingProvider):
         )
 
         try:
-            raw_text = self._call_api(paths, profile)
+            raw_text = self._call_api(paths, profile, ui_data=ui_data)
             logger.debug("Gemini brut: %s", raw_text[:400])
 
             # JSON robuste (si jamais il y a des ```json ....```, safe_json_parse gère)
@@ -122,6 +122,7 @@ class GeminiListingClient(AIListingProvider):
         self,
         image_paths: List[Path],
         profile: AnalysisProfile,
+        ui_data: Dict[str, Any] | None = None,
     ) -> List[Any]:
         """
         Construit une liste de "parts" pour google-generativeai :
@@ -132,7 +133,31 @@ class GeminiListingClient(AIListingProvider):
         # Texte : contrat global + profil spécialisé
         full_prompt = PROMPT_CONTRACT + "\n\n" + profile.prompt_suffix
 
+        measurement_mode = None
+        try:
+            measurement_mode = (ui_data or {}).get("measurement_mode")
+            if measurement_mode:
+                logger.debug(
+                    "Gemini._build_parts: measurement_mode fourni: %s",
+                    measurement_mode,
+                )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(
+                "Gemini._build_parts: lecture measurement_mode impossible (%s)",
+                exc,
+            )
+            measurement_mode = None
+
         parts: List[Any] = [full_prompt]
+
+        if measurement_mode:
+            parts.append(
+                (
+                    f"Mode de relevé UI : {measurement_mode}. "
+                    "Si measurement_mode=mesures, estime la taille depuis les mesures à plat "
+                    "quand aucune étiquette n'est lisible, sans inventer ni lister les mesures."
+                )
+            )
 
         for path in image_paths:
             if not path.exists():
@@ -162,6 +187,7 @@ class GeminiListingClient(AIListingProvider):
         self,
         image_paths: List[Path],
         profile: AnalysisProfile,
+        ui_data: Dict[str, Any] | None = None,
     ) -> str:
         """
         Appelle l'API Gemini en mode "simple" :
@@ -172,7 +198,7 @@ class GeminiListingClient(AIListingProvider):
         On attend donc que response.text soit une chaîne JSON (éventuellement encadrée
         par des ```json ... ```).
         """
-        parts = self._build_parts(image_paths, profile)
+        parts = self._build_parts(image_paths, profile, ui_data=ui_data)
 
         logger.debug(
             "Appel API Gemini (model=%s, nb_images=%d)...",
