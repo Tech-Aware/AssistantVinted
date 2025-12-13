@@ -627,7 +627,7 @@ def build_pull_tommy_description(
 
         style_clause = f" dans un style {pattern}" if pattern else ""
         descriptive_sentence = (
-            f"{neckline_text}{style_clause}, dans un coloris {color_text} et une {material_phrase} pour un look iconique et confortable."
+            f"{neckline_text}{style_clause} aux coloris {color_text}, et une {material_phrase} pour un look iconique et confortable."
         ).strip()
 
         composition_sentence = _build_pull_tommy_composition(
