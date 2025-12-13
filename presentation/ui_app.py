@@ -587,15 +587,17 @@ class VintedAIApp(ctk.CTk):
                 ui_data=ui_data,
             )
 
-            self.current_listing = listing
+            needs_manual_sku = self._needs_manual_sku(listing)
 
-            self._prompt_composition_if_needed(listing)
+            self.current_listing = listing
 
             output = self._format_listing(listing)
             self.result_text.insert("1.0", output)
 
-            if self._needs_manual_sku(listing):
+            if needs_manual_sku:
                 self._prompt_for_sku(listing)
+
+            self._prompt_composition_if_needed(listing)
 
         except Exception as exc:
             logger.error("Erreur provider IA: %s", exc, exc_info=True)
@@ -606,6 +608,13 @@ class VintedAIApp(ctk.CTk):
 
     def _prompt_composition_if_needed(self, listing: VintedListing) -> None:
         try:
+            if listing.profile_name and listing.profile_name != AnalysisProfileName.PULL_TOMMY.value:
+                logger.debug(
+                    "_prompt_composition_if_needed: profil %s sans modale composition.",
+                    listing.profile_name,
+                )
+                return
+
             placeholder = "Composition non lisible (voir photos)."
             if placeholder not in (listing.description or ""):
                 logger.info("_prompt_composition_if_needed: composition déjà renseignée.")
