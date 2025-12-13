@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import tkinter as tk
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -675,6 +676,7 @@ class VintedAIApp(ctk.CTk):
             composition_frame.pack(padx=12, pady=(0, 12), anchor="center")
 
             composition_rows: List[Tuple[ctk.CTkComboBox, ctk.CTkComboBox]] = []
+            tab_sequence: List[Any] = []
 
             def _attach_autocomplete(
                 combobox: ctk.CTkComboBox, options: List[str], label: str
@@ -682,13 +684,19 @@ class VintedAIApp(ctk.CTk):
                 try:
                     def _on_key_release(event: Any) -> None:
                         try:
-                            current_value = combobox.get().strip().lower()
+                            current_value_raw = combobox.get()
+                            current_value = current_value_raw.strip().lower()
                             filtered_values = [
                                 value
                                 for value in options
                                 if value.lower().startswith(current_value)
                             ]
                             combobox.configure(values=filtered_values or options)
+                            combobox.set(current_value_raw)
+                            try:
+                                combobox._entry.icursor(tk.END)
+                            except Exception:  # pragma: no cover - best effort
+                                pass
                             combobox._open_dropdown_menu()
                         except Exception as exc_key:  # pragma: no cover - defensive
                             logger.error(
@@ -715,6 +723,7 @@ class VintedAIApp(ctk.CTk):
                 material_combo.set("")
                 material_combo.pack(side="left", padx=(6, 10), pady=4)
                 _attach_autocomplete(material_combo, material_options, f"matière-{row_index}")
+                tab_sequence.append(material_combo._entry)
 
                 percent_combo = ctk.CTkComboBox(
                     row_frame,
@@ -726,6 +735,7 @@ class VintedAIApp(ctk.CTk):
                 percent_combo.set("")
                 percent_combo.pack(side="left", padx=(0, 6), pady=4)
                 _attach_autocomplete(percent_combo, percent_values, f"pourcentage-{row_index}")
+                tab_sequence.append(percent_combo._entry)
 
                 percent_label = ctk.CTkLabel(row_frame, text="%")
                 percent_label.pack(side="left", padx=(0, 4))
@@ -898,6 +908,50 @@ class VintedAIApp(ctk.CTk):
                 width=180,
             )
             missing_btn.pack(side="left", padx=8)
+
+            try:
+                def _bind_tab_order() -> None:
+                    try:
+                        ordered_targets: List[Any] = tab_sequence + [validate_btn, missing_btn]
+                        for idx, widget in enumerate(tab_sequence):
+                            try:
+                                next_widget = ordered_targets[idx + 1]
+                            except Exception:
+                                next_widget = validate_btn
+
+                            def _focus_next(event: Any, target: Any = next_widget) -> str:
+                                try:
+                                    target.focus_set()
+                                except Exception as exc_focus:  # pragma: no cover - defensive
+                                    logger.error(
+                                        "Navigation tabulation: focus impossible sur %s: %s",
+                                        target,
+                                        exc_focus,
+                                        exc_info=True,
+                                    )
+                                return "break"
+
+                            try:
+                                widget.bind("<Tab>", _focus_next)
+                            except Exception as exc_bind:  # pragma: no cover - defensive
+                                logger.error(
+                                    "Navigation tabulation: liaison impossible sur widget %s: %s",
+                                    widget,
+                                    exc_bind,
+                                    exc_info=True,
+                                )
+                    except Exception as exc_tab:  # pragma: no cover - defensive
+                        logger.error(
+                            "Navigation tabulation: erreur lors de la configuration: %s",
+                            exc_tab,
+                            exc_info=True,
+                        )
+
+                _bind_tab_order()
+            except Exception as exc_tab_bind:  # pragma: no cover - defensive
+                logger.error(
+                    "Navigation tabulation: erreur inattendue: %s", exc_tab_bind, exc_info=True
+                )
 
             modal.protocol("WM_DELETE_WINDOW", fallback_composition)
         except Exception as exc:
