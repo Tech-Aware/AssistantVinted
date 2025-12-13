@@ -276,6 +276,7 @@ def _format_material_segment(
         priority_mapping = {
             "cachemire": "cachemire",
             "cashmere": "cachemire",
+            "angora": "angora",
             "laine": "laine",
             "wool": "laine",
             "lin": "lin",
