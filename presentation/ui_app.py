@@ -686,7 +686,6 @@ class VintedAIApp(ctk.CTk):
                     state="readonly",
                     width=260,
                     justify="left",
-                    placeholder_text="Choisir un composant",
                 )
                 material_combo.set("")
                 material_combo.pack(side="left", padx=(4, 8), pady=4)
@@ -697,7 +696,6 @@ class VintedAIApp(ctk.CTk):
                     state="readonly",
                     width=80,
                     justify="center",
-                    placeholder_text="%",
                 )
                 percent_combo.set("")
                 percent_combo.pack(side="left", padx=(0, 6), pady=4)
