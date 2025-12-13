@@ -225,6 +225,22 @@ def _normalize_defects(defects: Optional[str]) -> str:
         return ""
 
 
+def _normalize_pull_size(size: Optional[str]) -> str:
+    try:
+        raw = _safe_clean(size).upper()
+        if not raw:
+            return ""
+
+        main_token = raw.split("/", 1)[0].strip()
+        if main_token:
+            return main_token
+
+        return raw
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("_normalize_pull_size: normalisation taille échouée (%s)", exc)
+        return _safe_clean(size)
+
+
 def _strip_footer_lines(description: str) -> str:
     try:
         if not description:
@@ -553,7 +569,7 @@ def build_pull_tommy_description(
         cotton_percent = features.get("cotton_percent")
         wool_percent = features.get("wool_percent")
         colors_raw = features.get("main_colors")
-        size = _safe_clean(features.get("size"))
+        size = _normalize_pull_size(features.get("size"))
         size_source = (_safe_clean(features.get("size_source")) or "").lower()
         measurement_mode = (_safe_clean(features.get("measurement_mode")) or "").lower()
         defects = ai_defects or features.get("defects")
@@ -623,7 +639,7 @@ def build_pull_tommy_description(
 
         tokens_hashtag: List[str] = []
         try:
-            size_token = size.replace(" ", "").upper() if size else "NC"
+            size_token = _normalize_pull_size(size).replace(" ", "") if size else "NC"
             durin_tag = f"#durin31tf{size_token}"
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning("build_pull_tommy_description: durin_tag défaut (%s)", exc)
