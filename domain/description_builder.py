@@ -233,18 +233,24 @@ def _strip_footer_lines(description: str) -> str:
         filtered_lines: List[str] = []
         for line in description.split("\n"):
             lowered = line.strip().lower()
-            if lowered.startswith("marque :"):
-                logger.debug("_strip_footer_lines: ligne marque supprimée: %s", line)
-                continue
-            if lowered.startswith("couleur :"):
-                logger.debug("_strip_footer_lines: ligne couleur supprimée: %s", line)
-                continue
-            if lowered.startswith("taille :"):
-                logger.debug("_strip_footer_lines: ligne taille supprimée: %s", line)
-                continue
-            if lowered.startswith("sku"):
-                logger.debug("_strip_footer_lines: ligne SKU supprimée: %s", line)
-                continue
+            try:
+                import re
+
+                if re.match(r"^[#*\-\s]*marque\s*:", lowered):
+                    logger.debug("_strip_footer_lines: ligne marque supprimée: %s", line)
+                    continue
+                if re.match(r"^[#*\-\s]*couleur\s*:", lowered):
+                    logger.debug("_strip_footer_lines: ligne couleur supprimée: %s", line)
+                    continue
+                if re.match(r"^[#*\-\s]*taille\s*:", lowered):
+                    logger.debug("_strip_footer_lines: ligne taille supprimée: %s", line)
+                    continue
+                if re.match(r"^[#*\-\s]*sku", lowered):
+                    logger.debug("_strip_footer_lines: ligne SKU supprimée: %s", line)
+                    continue
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning("_strip_footer_lines: regex footer ignoré (%s)", exc)
+
             filtered_lines.append(line)
 
         cleaned = "\n".join(filtered_lines)
@@ -615,4 +621,4 @@ def build_pull_tommy_description(
         return cleaned
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("build_pull_tommy_description: fallback description IA (%s)", exc)
-        return _safe_clean(ai_description)
+        return _strip_footer_lines(_safe_clean(ai_description))
