@@ -40,6 +40,8 @@ class VintedListing:
     tags: List[str] = field(default_factory=list)
     sku: Optional[str] = None
     sku_status: Optional[str] = None
+    features: Optional[Dict[str, Any]] = None
+    profile_name: Optional[str] = None
 
     # ------------------------------------------------------------------ #
     # Validation métier
@@ -140,6 +142,8 @@ class VintedListing:
             color = data.get("color")
             sku = data.get("sku")
             sku_status = data.get("sku_status")
+            features = data.get("features")
+            profile_name = data.get("profile_name")
 
             raw_condition = data.get("condition")
             condition = cls._parse_condition(raw_condition)
@@ -166,6 +170,8 @@ class VintedListing:
                 tags=tags,
                 sku=sku,
                 sku_status=sku_status,
+                features=features,
+                profile_name=profile_name,
             )
 
             listing.validate()
@@ -196,6 +202,10 @@ class VintedListing:
                 "sku": self.sku,
                 "sku_status": self.sku_status,
             }
+            if self.features is not None:
+                result["features"] = self.features
+            if self.profile_name:
+                result["profile_name"] = self.profile_name
             logger.debug("Sérialisation VintedListing: %r", result)
             return result
         except Exception as exc:

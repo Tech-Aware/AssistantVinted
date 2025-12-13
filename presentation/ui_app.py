@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from PIL import Image  # encore utilisé pour l’aperçu plein écran si tu le gardes ailleurs
 
@@ -15,7 +16,7 @@ from tkinter import filedialog, messagebox
 from domain.ai_provider import AIProviderName, AIListingProvider
 from domain.models import VintedListing
 from domain.templates import AnalysisProfileName, AnalysisProfile, ALL_PROFILES
-from domain.title_builder import SKU_PREFIX
+from domain.title_builder import SKU_PREFIX, build_pull_tommy_title
 
 from .image_preview import ImagePreview  # <- widget réutilisé depuis l’ancienne app
 
@@ -588,6 +589,8 @@ class VintedAIApp(ctk.CTk):
 
             self.current_listing = listing
 
+            self._prompt_composition_if_needed(listing)
+
             output = self._format_listing(listing)
             self.result_text.insert("1.0", output)
 
@@ -600,6 +603,198 @@ class VintedAIApp(ctk.CTk):
                 "Erreur IA",
                 f"Une erreur est survenue pendant l'analyse IA :\n{exc}",
             )
+
+    def _prompt_composition_if_needed(self, listing: VintedListing) -> None:
+        try:
+            placeholder = "Composition non lisible (voir photos)."
+            if placeholder not in (listing.description or ""):
+                logger.info("_prompt_composition_if_needed: composition déjà renseignée.")
+                return
+
+            logger.info("_prompt_composition_if_needed: ouverture de la saisie composition manuelle.")
+            self._open_composition_modal(listing, placeholder)
+        except Exception as exc:
+            logger.error("_prompt_composition_if_needed: erreur %s", exc, exc_info=True)
+
+    def _parse_manual_composition_text(self, raw_text: str) -> Dict[str, Any]:
+        try:
+            clean = (raw_text or "").strip()
+            if not clean:
+                return {}
+
+            parsed: Dict[str, Any] = {"material": clean}
+            cotton_val: Optional[int] = None
+            wool_val: Optional[int] = None
+            angora_val: Optional[int] = None
+
+            try:
+                matches = re.findall(
+                    r"(\d+)\s*%\s*([A-Za-zÀ-ÿ]+)", clean, flags=re.IGNORECASE
+                )
+                for percent_txt, fiber_name in matches:
+                    try:
+                        percent_val = int(percent_txt)
+                    except (TypeError, ValueError):
+                        logger.debug(
+                            "_parse_manual_composition_text: pourcentage illisible (%s)",
+                            percent_txt,
+                        )
+                        continue
+
+                    fiber_low = fiber_name.strip().lower()
+                    if "angora" in fiber_low:
+                        angora_val = percent_val
+                    elif "laine" in fiber_low or "wool" in fiber_low:
+                        wool_val = percent_val
+                    elif "coton" in fiber_low or "cotton" in fiber_low:
+                        cotton_val = percent_val
+            except Exception as nested:  # pragma: no cover - defensive
+                logger.warning(
+                    "_parse_manual_composition_text: extraction partielle (%s)", nested
+                )
+
+            if cotton_val is not None:
+                parsed["cotton_percent"] = cotton_val
+            if wool_val is not None:
+                parsed["wool_percent"] = wool_val
+            if angora_val is not None:
+                parsed["angora_percent"] = angora_val
+
+            logger.info("_parse_manual_composition_text: données extraites %s", parsed)
+            return parsed
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.error(
+                "_parse_manual_composition_text: erreur inattendue %s", exc, exc_info=True
+            )
+            return {}
+
+    def _open_composition_modal(self, listing: VintedListing, placeholder: str) -> None:
+        try:
+            modal = ctk.CTkToplevel(self)
+            modal.title("Composition illisible")
+            modal.geometry("720x640")
+            modal.transient(self)
+            modal.grab_set()
+            modal.lift()
+            modal.focus_force()
+            modal.attributes("-topmost", True)
+
+            info_label = ctk.CTkLabel(
+                modal,
+                text=(
+                    "La composition de l'étiquette n'a pas été reconnue.\n"
+                    "Merci de consulter les photos dans la galerie ci-dessous puis d'indiquer le texte exact."
+                ),
+                justify="center",
+            )
+            info_label.pack(padx=16, pady=(18, 10))
+
+            gallery_frame = ctk.CTkFrame(modal)
+            gallery_frame.pack(expand=True, fill="both", padx=12, pady=(0, 10))
+
+            gallery = ImagePreview(gallery_frame, width=240, height=260)
+            gallery.set_removal_enabled(False)
+            gallery.update_images(self.selected_images)
+            gallery.pack(expand=True, fill="both", padx=6, pady=6)
+
+            entry_label = ctk.CTkLabel(
+                modal,
+                text="Recopiez le texte de l'étiquette de composition (ou laissez vide si coupée) :",
+                anchor="w",
+            )
+            entry_label.pack(fill="x", padx=16, pady=(8, 4))
+
+            composition_text = ctk.CTkTextbox(modal, height=80)
+            composition_text.pack(fill="x", padx=16, pady=(0, 10))
+
+            def _apply_composition_text(raw_text: str) -> None:
+                try:
+                    clean_text = raw_text.strip()
+                    if clean_text:
+                        sentence = f"Composition : {clean_text.rstrip('.')}."
+                    else:
+                        sentence = "Etiquette de composition coupée pour plus de confort."
+
+                    updated_description = (listing.description or "").replace(placeholder, sentence)
+                    listing.description = updated_description
+
+                    manual_features = self._parse_manual_composition_text(clean_text)
+                    listing.features = listing.features or {}
+                    listing.features.update(manual_features)
+
+                    if "brand" not in listing.features and listing.brand:
+                        listing.features["brand"] = listing.brand
+                    if "size" not in listing.features and listing.size:
+                        listing.features["size"] = listing.size
+                    listing.features.setdefault("garment_type", "pull")
+                    listing.features.setdefault("gender", "femme")
+
+                    try:
+                        if listing.profile_name == AnalysisProfileName.PULL_TOMMY.value:
+                            listing.title = build_pull_tommy_title(listing.features)
+                            logger.info(
+                                "Titre mis à jour après saisie composition: %s", listing.title
+                            )
+                    except Exception as exc_title:  # pragma: no cover - defensive
+                        logger.error(
+                            "Erreur lors du recalcul du titre avec composition: %s",
+                            exc_title,
+                            exc_info=True,
+                        )
+
+                    logger.info("Composition manuelle appliquée: %s", sentence)
+                    if self.result_text:
+                        output = self._format_listing(listing)
+                        self.result_text.delete("1.0", "end")
+                        self.result_text.insert("1.0", output)
+                except Exception as exc_apply:  # pragma: no cover - defensive
+                    logger.error("Erreur lors de l'application de la composition: %s", exc_apply, exc_info=True)
+
+            def close_modal() -> None:
+                try:
+                    modal.grab_release()
+                    modal.destroy()
+                    self.focus_force()
+                except Exception as exc_close:  # pragma: no cover - defensive
+                    logger.error("Erreur lors de la fermeture de la modale composition: %s", exc_close, exc_info=True)
+
+            def validate_composition() -> None:
+                try:
+                    user_text = composition_text.get("1.0", "end")
+                    _apply_composition_text(user_text)
+                    close_modal()
+                except Exception as exc_validate:  # pragma: no cover - defensive
+                    logger.error("Erreur lors de la validation de la composition: %s", exc_validate, exc_info=True)
+
+            def fallback_composition() -> None:
+                try:
+                    _apply_composition_text("")
+                    close_modal()
+                except Exception as exc_fallback:  # pragma: no cover - defensive
+                    logger.error("Erreur lors de l'application du fallback composition: %s", exc_fallback, exc_info=True)
+
+            button_frame = ctk.CTkFrame(modal)
+            button_frame.pack(pady=(4, 14))
+
+            validate_btn = ctk.CTkButton(
+                button_frame,
+                text="Valider la composition",
+                command=validate_composition,
+                width=180,
+            )
+            validate_btn.pack(side="left", padx=8)
+
+            missing_btn = ctk.CTkButton(
+                button_frame,
+                text="Étiquette coupée/absente",
+                command=fallback_composition,
+                width=180,
+            )
+            missing_btn.pack(side="left", padx=8)
+
+            modal.protocol("WM_DELETE_WINDOW", fallback_composition)
+        except Exception as exc:
+            logger.error("_open_composition_modal: erreur %s", exc, exc_info=True)
 
     # ------------------------------------------------------------------
     # Format

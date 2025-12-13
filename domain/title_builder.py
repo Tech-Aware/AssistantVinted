@@ -256,11 +256,13 @@ def _format_material_segment(
     material: Optional[str],
     cotton_percent: Optional[Any],
     wool_percent: Optional[Any],
+    angora_percent: Optional[Any] = None,
 ) -> Optional[str]:
     """Construit un segment matière lisible (coton/laine) sans inventer."""
     try:
         cotton_value: Optional[int] = None
         wool_value: Optional[int] = None
+        angora_value: Optional[int] = None
 
         try:
             cotton_value = int(cotton_percent) if cotton_percent is not None else None
@@ -271,6 +273,11 @@ def _format_material_segment(
             wool_value = int(wool_percent) if wool_percent is not None else None
         except (TypeError, ValueError):
             logger.debug("_format_material_segment: wool illisible (%s)", wool_percent)
+
+        try:
+            angora_value = int(angora_percent) if angora_percent is not None else None
+        except (TypeError, ValueError):
+            logger.debug("_format_material_segment: angora illisible (%s)", angora_percent)
 
         material_label = (material or "").strip().lower()
         priority_mapping = {
@@ -287,7 +294,9 @@ def _format_material_segment(
             "satin": "satin",
         }
 
-        # --- Matières prioritaires (laine / cachemire / lin / satin) -----
+        # --- Matières prioritaires (laine / cachemire / lin / satin / angora) -----
+        if angora_value is not None and angora_value > 0:
+            return "angora"
         if wool_value is not None and wool_value > 0:
             return "laine"
 
@@ -577,6 +586,7 @@ def build_pull_tommy_title(features: Dict[str, Any]) -> str:
             _normalize_str(features.get("material")),
             features.get("cotton_percent"),
             features.get("wool_percent"),
+            features.get("angora_percent"),
         )
 
         colors_input = features.get("main_colors") or features.get("colors")

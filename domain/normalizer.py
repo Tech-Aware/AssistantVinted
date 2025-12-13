@@ -127,6 +127,35 @@ def _extract_fit_from_text(text: str) -> Optional[str]:
     return None
 
 
+def _normalize_tommy_brand(raw_brand: Optional[Any]) -> Optional[str]:
+    """Normalise les variantes Tommy pour éviter "Hilfiger Denim"."""
+    try:
+        if raw_brand is None:
+            return None
+
+        brand_str = str(raw_brand).strip()
+        if not brand_str:
+            return None
+
+        lowered = brand_str.lower()
+        aliases = ["hilfiger denim", "tommy hilfiger denim"]
+        for alias in aliases:
+            if alias in lowered:
+                logger.debug(
+                    "_normalize_tommy_brand: alias '%s' détecté, normalisation en Tommy Hilfiger",
+                    alias,
+                )
+                return "Tommy Hilfiger"
+
+        return brand_str
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("_normalize_tommy_brand: erreur de normalisation (%s)", exc)
+        try:
+            return str(raw_brand).strip()
+        except Exception:
+            return None
+
+
 def _normalize_fit_label(raw_fit: Optional[str]) -> Optional[str]:
     """
     Uniformise les libellés de coupe.
@@ -469,14 +498,24 @@ def build_features_for_pull_tommy(
                 sku = None
                 sku_status = "missing"
 
+        try:
+            normalized_brand = _normalize_tommy_brand(brand)
+        except Exception as brand_exc:  # pragma: no cover - defensive
+            logger.warning(
+                "build_features_for_pull_tommy: échec normalisation marque (%s)",
+                brand_exc,
+            )
+            normalized_brand = brand
+
         features: Dict[str, Any] = {
-            "brand": brand,
+            "brand": normalized_brand,
             "garment_type": garment_type,
             "neckline": neckline,
             "pattern": pattern,
             "material": material,
             "cotton_percent": cotton_percent,
             "wool_percent": wool_percent,
+            "angora_percent": angora_percent,
             "main_colors": main_colors,
             "gender": gender,
             "size": size,
@@ -577,6 +616,15 @@ def normalize_and_postprocess(
     # --- 3) Merge final ----------------------------------------------------
     result.update(features)
     result["title"] = title
+    try:
+        result["features"] = features
+        result["profile_name"] = profile_name.value
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(
+            "normalize_and_postprocess: impossible de stocker les métadonnées (%s)",
+            exc,
+        )
+
     try:
         result["description"] = _strip_footer_lines(description)
     except Exception as exc:  # pragma: no cover - defensive
