@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -218,10 +219,32 @@ def _normalize_defects(defects: Optional[str]) -> str:
             cut = base.strip()
 
         cleaned = cut.rstrip(". ,;")
-        return cleaned
+        softened = _soften_defect_terms(cleaned)
+        return softened
     except Exception as exc:  # pragma: no cover - defensive
         logger.error("_normalize_defects: erreur %s", exc)
         return ""
+
+
+def _soften_defect_terms(defects: str) -> str:
+    """Ajuste certains termes pour des formulations moins anxiogènes."""
+    try:
+        text = defects
+        if not text:
+            return ""
+
+        replacements = {"généralisé": "visible", "generalise": "visible"}
+        for needle, replacement in replacements.items():
+            if needle in text.lower():
+                logger.info(
+                    "_soften_defect_terms: remplacement '%s' -> '%s'", needle, replacement
+                )
+                text = re.sub(needle, replacement, text, flags=re.IGNORECASE)
+
+        return text
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("_soften_defect_terms: erreur %s", exc)
+        return defects or ""
 
 
 def _normalize_pull_size(size: Optional[str]) -> str:
