@@ -651,8 +651,8 @@ class VintedAIApp(ctk.CTk):
                     "Précisez la composition via les listes déroulantes ci-dessous (jusqu'à 4 lignes).\n"
                     "Merci d'indiquer le pourcentage uniquement si un composant est sélectionné."
                 ),
-                anchor="w",
-                justify="left",
+                anchor="center",
+                justify="center",
             )
             entry_label.pack(fill="x", padx=16, pady=(8, 4))
 
@@ -672,33 +672,59 @@ class VintedAIApp(ctk.CTk):
             percent_values = [str(index) for index in range(1, 101)]
 
             composition_frame = ctk.CTkFrame(modal)
-            composition_frame.pack(fill="x", padx=12, pady=(0, 12))
+            composition_frame.pack(fill="x", padx=12, pady=(0, 12), anchor="center")
 
             composition_rows: List[Tuple[ctk.CTkComboBox, ctk.CTkComboBox]] = []
 
+            def _attach_autocomplete(
+                combobox: ctk.CTkComboBox, options: List[str], label: str
+            ) -> None:
+                try:
+                    def _on_key_release(event: Any) -> None:
+                        try:
+                            current_value = combobox.get().strip().lower()
+                            filtered_values = [
+                                value
+                                for value in options
+                                if value.lower().startswith(current_value)
+                            ]
+                            combobox.configure(values=filtered_values or options)
+                        except Exception as exc_key:  # pragma: no cover - defensive
+                            logger.error(
+                                "Autocomplete %s: erreur lors du filtrage: %s", label, exc_key, exc_info=True
+                            )
+
+                    combobox.bind("<KeyRelease>", _on_key_release)
+                except Exception as exc_autocomplete:  # pragma: no cover - defensive
+                    logger.error(
+                        "Autocomplete %s: impossible d'attacher le filtre: %s", label, exc_autocomplete, exc_info=True
+                    )
+
             for row_index in range(4):
                 row_frame = ctk.CTkFrame(composition_frame)
-                row_frame.pack(fill="x", padx=8, pady=4)
+                row_frame.pack(fill="x", padx=8, pady=4, anchor="center")
 
                 material_combo = ctk.CTkComboBox(
                     row_frame,
                     values=material_options,
-                    state="readonly",
+                    state="normal",
                     width=260,
-                    justify="left",
+                    justify="center",
                 )
                 material_combo.set("")
                 material_combo.pack(side="left", padx=(4, 8), pady=4)
+                _attach_autocomplete(material_combo, material_options, f"matière-{row_index}")
 
                 percent_combo = ctk.CTkComboBox(
                     row_frame,
                     values=percent_values,
-                    state="readonly",
+                    state="normal",
                     width=80,
                     justify="center",
                 )
                 percent_combo.set("")
                 percent_combo.pack(side="left", padx=(0, 6), pady=4)
+                _attach_autocomplete(percent_combo, percent_values, f"pourcentage-{row_index}")
 
                 percent_label = ctk.CTkLabel(row_frame, text="%")
                 percent_label.pack(side="left", padx=(0, 4))
@@ -743,6 +769,35 @@ class VintedAIApp(ctk.CTk):
                             return None
 
                         if selected_material and selected_percent:
+                            if selected_material.lower() not in [
+                                option.lower() for option in material_options
+                            ]:
+                                logger.warning(
+                                    "Ligne %s: composant inconnu saisi: %s.",
+                                    index,
+                                    selected_material,
+                                )
+                                messagebox.showerror(
+                                    "Composant invalide",
+                                    (
+                                        "Merci de choisir un composant depuis la liste déroulante pour la ligne "
+                                        f"{index}."
+                                    ),
+                                )
+                                return None
+
+                            if not selected_percent.isdigit():
+                                logger.warning(
+                                    "Ligne %s: pourcentage non numérique saisi: %s.",
+                                    index,
+                                    selected_percent,
+                                )
+                                messagebox.showerror(
+                                    "Pourcentage invalide",
+                                    "Le pourcentage doit être un nombre entre 1 et 100.",
+                                )
+                                return None
+
                             percent_value = int(selected_percent)
                             if percent_value < 1 or percent_value > 100:
                                 logger.warning(
