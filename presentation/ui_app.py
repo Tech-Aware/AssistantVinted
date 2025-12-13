@@ -886,6 +886,20 @@ class VintedAIApp(ctk.CTk):
             listing.sku_status = "manual"
             listing.title = f"{base_title} {SKU_PREFIX}{normalized}".strip()
 
+            try:
+                listing.features = listing.features or {}
+                listing.features.update({"sku": normalized, "sku_status": listing.sku_status})
+                logger.info(
+                    "SKU manuel synchronisé dans les features pour recalculs ultérieurs (status=%s)",
+                    listing.sku_status,
+                )
+            except Exception as exc_features:  # pragma: no cover - defensive
+                logger.error(
+                    "Erreur lors de la synchronisation du SKU manuel dans les features: %s",
+                    exc_features,
+                    exc_info=True,
+                )
+
             logger.info("SKU manuel appliqué: %s", listing.title)
 
             if self.result_text:
