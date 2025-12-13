@@ -241,6 +241,8 @@ The final JSON MUST respect the following structure:
     "wool_percent": number | null,
     "gender": string | null,             // homme / femme / unisexe if visible
     "size": string | null,               // tag size from the label (e.g. S, M, L, XL, XXL...)
+    "size_estimated": string | null,     // ONLY when measurement_mode="mesures" and no label is readable
+    "size_source": "label" | "estimated" | null,  // origin of the size value
     "sku": string | null,
     "sku_status": "ok" | "missing" | "low_confidence"
   }
@@ -253,5 +255,9 @@ Rules:
 - For SKU: only set sku_status="ok" when a printed label is clearly visible in the foreground (held by a hand or stuck on the product) showing letters followed by digits (e.g. "PTF127"); otherwise leave sku null and set sku_status="missing".
 - Use the exact words printed on the composition tag for "material". Do NOT guess percentages.
 - If colors are not clear, keep main_colors as null instead of guessing.
+- measurement_mode (provided by the UI):
+  - If "etiquette": only use a size visible on a label; do not estimate from measurements.
+  - If "mesures": no label is readable; read flat measurements and estimate a size, filling size_estimated and size_source="estimated". If measurements are unusable, leave size_estimated null.
+  - Never include raw measurements in the JSON.
 - Do NOT translate JSON keys; they must remain in English exactly as written above.
 """

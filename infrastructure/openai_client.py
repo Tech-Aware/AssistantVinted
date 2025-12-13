@@ -86,7 +86,7 @@ class OpenAIListingClient(AIListingProvider):
             images_b64 = [self._encode_image(p) for p in image_paths]
 
             # 2) Construction du payload (prompt contractuel + profil + multi-images)
-            payload = self._build_payload(images_b64, profile)
+            payload = self._build_payload(images_b64, profile, ui_data=ui_data)
 
             # 3) Appel API OpenAI
             response_json = self._call_api(payload)
@@ -148,6 +148,7 @@ class OpenAIListingClient(AIListingProvider):
         self,
         images_b64: List[str],
         profile: AnalysisProfile,
+        ui_data: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """
         Construit le payload JSON pour /v1/chat/completions avec :
@@ -159,17 +160,41 @@ class OpenAIListingClient(AIListingProvider):
             # Prompt système = contrat général + instructions spécifiques au profil
             full_prompt = PROMPT_CONTRACT + "\n\n" + profile.prompt_suffix
 
+            measurement_mode = None
+            try:
+                measurement_mode = (ui_data or {}).get("measurement_mode")
+                if measurement_mode:
+                    logger.debug(
+                        "OpenAI._build_payload: measurement_mode fourni: %s",
+                        measurement_mode,
+                    )
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "OpenAI._build_payload: lecture measurement_mode impossible (%s)",
+                    exc,
+                )
+                measurement_mode = None
+
             # Contenu utilisateur : texte + toutes les images
+            user_instruction = (
+                "Analyse l'ensemble des images ci-dessous. "
+                "Il s'agit du même vêtement photographié sous différents angles, "
+                "avec des étiquettes et des mesures à plat. "
+                "Génère une annonce Vinted (titre + description) en respectant "
+                "strictement le contrat JSON décrit dans le message système."
+            )
+
+            if measurement_mode:
+                user_instruction += (
+                    f" Mode de relevé fourni par l'UI : {measurement_mode}. "
+                    "Si measurement_mode=mesures, la taille doit être estimée depuis les "
+                    "mesures à plat quand aucune étiquette n'est lisible."
+                )
+
             user_content: List[Dict[str, Any]] = [
                 {
                     "type": "text",
-                    "text": (
-                        "Analyse l'ensemble des images ci-dessous. "
-                        "Il s'agit du même vêtement photographié sous différents angles, "
-                        "avec des étiquettes et des mesures à plat. "
-                        "Génère une annonce Vinted (titre + description) en respectant "
-                        "strictement le contrat JSON décrit dans le message système."
-                    ),
+                    "text": user_instruction,
                 }
             ]
 
@@ -208,9 +233,10 @@ class OpenAIListingClient(AIListingProvider):
             }
 
             logger.debug(
-                "Payload OpenAI construit (%d images, model=%s).",
+                "Payload OpenAI construit (%d images, model=%s, measurement_mode=%s).",
                 len(images_b64),
                 self.model,
+                measurement_mode,
             )
             return payload
 

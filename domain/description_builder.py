@@ -89,7 +89,7 @@ def _build_state_sentence(defects: Optional[str]) -> str:
             return "Très bon état."
         return (
             "Très bon état. Légères traces d'usage : "
-            f"{clean_defects} (voir photos)."
+            f"{clean_defects}, typiques de cette composition (voir photos)."
         )
     except Exception as exc:  # pragma: no cover - defensive
         logger.error("_build_state_sentence: erreur %s", exc)
@@ -230,25 +230,132 @@ def _strip_footer_lines(description: str) -> str:
         if not description:
             return ""
 
+        try:
+            description = description.replace("\u00A0", " ")
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.debug("_strip_footer_lines: normalisation espaces ignorée (%s)", exc)
+
         filtered_lines: List[str] = []
         for line in description.split("\n"):
             lowered = line.strip().lower()
-            if lowered.startswith("marque :"):
-                logger.debug("_strip_footer_lines: ligne marque supprimée: %s", line)
-                continue
-            if lowered.startswith("couleur :"):
-                logger.debug("_strip_footer_lines: ligne couleur supprimée: %s", line)
-                continue
-            if lowered.startswith("sku"):
-                logger.debug("_strip_footer_lines: ligne SKU supprimée: %s", line)
-                continue
+            try:
+                import re
+
+                if re.match(r"^[#*\-\s]*marque\s*:", lowered):
+                    logger.debug("_strip_footer_lines: ligne marque supprimée: %s", line)
+                    continue
+                if re.match(r"^[#*\-\s]*couleur\s*:", lowered):
+                    logger.debug("_strip_footer_lines: ligne couleur supprimée: %s", line)
+                    continue
+                if re.match(r"^[#*\-\s]*taille\s*:", lowered):
+                    logger.debug("_strip_footer_lines: ligne taille supprimée: %s", line)
+                    continue
+                if re.match(r"^[#*\-\s]*sku", lowered):
+                    logger.debug("_strip_footer_lines: ligne SKU supprimée: %s", line)
+                    continue
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning("_strip_footer_lines: regex footer ignoré (%s)", exc)
+
             filtered_lines.append(line)
 
         cleaned = "\n".join(filtered_lines)
+
+        try:
+            import re
+
+            cleaned = re.sub(
+                r"(?im)^\s*(marque|couleur|taille|sku)\s*:[^\n]*$",
+                "",
+                cleaned,
+            )
+            cleaned = re.sub(
+                r"(?is)\n+\s*(marque|couleur|taille|sku)\s*:[^\n]*", "", cleaned
+            )
+
+            final_lines: List[str] = []
+            blank_seen = False
+            for raw_line in cleaned.split("\n"):
+                if not raw_line.strip():
+                    if not blank_seen:
+                        final_lines.append("")
+                        blank_seen = True
+                    continue
+                final_lines.append(raw_line.rstrip())
+                blank_seen = False
+
+            cleaned = "\n".join(final_lines).strip()
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("_strip_footer_lines: nettoyage étendu ignoré (%s)", exc)
+
         return cleaned
     except Exception as exc:  # pragma: no cover - defensive
         logger.error("_strip_footer_lines: erreur %s", exc)
         return description
+
+
+def _build_pull_tommy_composition(
+    material: Optional[str], cotton_percent: Optional[Any], wool_percent: Optional[Any]
+) -> str:
+    try:
+        fibers: List[str] = []
+        seen: set[str] = set()
+
+        def _add_fiber(label: str, percent: Optional[int]) -> None:
+            try:
+                label_clean = _safe_clean(label).lower()
+                if not label_clean:
+                    return
+                key = f"{percent}-{label_clean}" if percent is not None else label_clean
+                if key in seen:
+                    return
+                seen.add(key)
+                display = label_clean.capitalize()
+                if percent is not None:
+                    fibers.append(f"{percent}% {display}")
+                else:
+                    fibers.append(display)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.debug(
+                    "_build_pull_tommy_composition: impossible d'ajouter %s (%s)",
+                    label,
+                    exc,
+                )
+
+        clean_material = _safe_clean(material)
+        if clean_material:
+            try:
+                import re
+
+                matches = re.findall(
+                    r"(\d+)\s*%\s*([A-Za-zÀ-ÿ]+)", clean_material, flags=re.IGNORECASE
+                )
+                for percent_txt, fiber_name in matches:
+                    percent_val = _format_percent(percent_txt)
+                    _add_fiber(fiber_name, percent_val)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.warning(
+                    "_build_pull_tommy_composition: parsing partiel de la composition (%s)",
+                    exc,
+                )
+
+        cotton_val = _format_percent(cotton_percent)
+        wool_val = _format_percent(wool_percent)
+
+        if cotton_val is not None:
+            _add_fiber("coton", cotton_val)
+        if wool_val is not None:
+            _add_fiber("laine", wool_val)
+
+        if fibers:
+            return "Composition : " + ", ".join(fibers) + "."
+
+        if clean_material:
+            return f"Composition (étiquette) : {clean_material}."
+
+        return "Composition non lisible (voir photos)."
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("_build_pull_tommy_composition: erreur %s", exc)
+        return "Composition non lisible (voir photos)."
 
 
 def _normalize_fit_display(raw_fit: Optional[str], model_hint: Optional[str] = None) -> str:
@@ -402,3 +509,149 @@ def build_jean_levis_description(
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("build_jean_levis_description: fallback description IA (%s)", exc)
         return _safe_clean(ai_description)
+
+
+def build_pull_tommy_description(
+    features: Dict[str, Any],
+    ai_description: Optional[str] = None,
+    ai_defects: Optional[str] = None,
+) -> str:
+    """Construit une description structurée pour un pull Tommy Hilfiger."""
+    try:
+        logger.info("build_pull_tommy_description: features reçus = %s", features)
+
+        brand = _safe_clean(features.get("brand")) or "Tommy Hilfiger"
+        garment_type = _safe_clean(features.get("garment_type")) or "pull"
+        gender = _safe_clean(features.get("gender")) or "femme"
+        neckline = _safe_clean(features.get("neckline"))
+        pattern = _safe_clean(features.get("pattern"))
+        material = _safe_clean(features.get("material"))
+        cotton_percent = features.get("cotton_percent")
+        wool_percent = features.get("wool_percent")
+        colors_raw = features.get("main_colors")
+        size = _safe_clean(features.get("size"))
+        size_source = (_safe_clean(features.get("size_source")) or "").lower()
+        measurement_mode = (_safe_clean(features.get("measurement_mode")) or "").lower()
+        defects = ai_defects or features.get("defects")
+
+        colors = ""
+        try:
+            if isinstance(colors_raw, list):
+                colors = ", ".join([_safe_clean(c) for c in colors_raw if _safe_clean(c)])
+            else:
+                colors = _safe_clean(colors_raw)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("build_pull_tommy_description: couleurs non exploitables (%s)", exc)
+            colors = ""
+
+        intro_parts: List[str] = []
+        intro_parts.append(f"{garment_type.capitalize()} {brand}")
+        if gender:
+            intro_parts.append(f"pour {gender}")
+        intro_base = " ".join(intro_parts).strip()
+
+        if size:
+            if size_source == "estimated" or measurement_mode == "mesures":
+                intro_sentence = (
+                    f"{intro_base} taille {size} (Estimée à la main à partir des mesures à plat)."
+                )
+            else:
+                intro_sentence = f"{intro_base} taille {size}."
+        else:
+            intro_sentence = f"{intro_base}."
+
+        material_phrase = "maille agréable"
+        cotton_val = _format_percent(cotton_percent)
+        wool_val = _format_percent(wool_percent)
+
+        if wool_val is not None:
+            material_phrase = f"maille {wool_val}% laine"
+        elif cotton_val is not None:
+            material_phrase = f"maille {cotton_val}% coton"
+        elif material:
+            material_phrase = f"maille {material}".strip()
+
+        color_text = colors or "aux couleurs iconiques"
+        if neckline:
+            neckline_low = neckline.lower()
+            neckline_text = neckline if neckline_low.startswith("col") else f"Col {neckline}"
+        else:
+            neckline_text = "Maille"
+
+        style_clause = f" dans un style {pattern}" if pattern else ""
+        descriptive_sentence = (
+            f"{neckline_text}{style_clause}, dans un coloris {color_text} et une {material_phrase} pour un look iconique et confortable."
+        ).strip()
+
+        composition_sentence = _build_pull_tommy_composition(
+            material=material,
+            cotton_percent=cotton_percent,
+            wool_percent=wool_percent,
+        )
+
+        state_sentence = _build_state_sentence(defects)
+
+        logistics_lines = [
+            "📏 Mesures détaillées visibles en photo pour plus de précisions.",
+            "📦 Envoi rapide et soigné.",
+        ]
+        logistics_sentence = "\n".join(logistics_lines)
+
+        tokens_hashtag: List[str] = []
+        try:
+            def _add_tag(token: str) -> None:
+                if token and token not in tokens_hashtag:
+                    tokens_hashtag.append(token)
+
+            base_tags = [
+                "#tommyhilfiger",
+                "#pulltommy",
+                "#tommy",
+                "#pullfemme",
+                "#modefemme",
+                "#preloved",
+                "#durin31tfM",
+                "#ptf",
+            ]
+            for token in base_tags:
+                _add_tag(token)
+
+            if cotton_val is not None:
+                _add_tag("#pullcoton")
+            if pattern and pattern.lower().strip() == "torsade":
+                _add_tag("#pulltorsade")
+
+            if colors:
+                for color_token in colors.split(","):
+                    clean_color = color_token.strip().lower().replace(" ", "")
+                    if clean_color:
+                        _add_tag(f"#{clean_color}")
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("build_pull_tommy_description: hashtags réduits (%s)", exc)
+
+        hashtags_block = " ".join(tokens_hashtag)
+        hashtags_with_cta = "\n".join(
+            [
+                "✨ Retrouvez tous mes pulls Tommy femme ici 👉 #durin31tfM",
+                "💡 Pensez à faire un lot pour profiter d’une réduction supplémentaire et économiser des frais d’envoi !",
+                "",
+                hashtags_block,
+            ]
+        )
+
+        paragraphs = [
+            intro_sentence,
+            descriptive_sentence,
+            composition_sentence,
+            state_sentence,
+            logistics_sentence,
+            hashtags_with_cta,
+        ]
+
+        description = "\n\n".join([p for p in paragraphs if p])
+        cleaned = _strip_footer_lines(description)
+        logger.debug("build_pull_tommy_description: description générée = %s", cleaned)
+        return cleaned
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.exception("build_pull_tommy_description: fallback description IA (%s)", exc)
+        return _strip_footer_lines(_safe_clean(ai_description))
